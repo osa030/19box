@@ -35,4 +35,4 @@ config/*.yaml
 *.log
 
 # Internal
-doc/  
+docs/  

@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package jukebox.v1;
+
+
+import "jukebox/v1/listener.proto";
+
+// 管理者用サービス（全APIで認証トークンが必要）
+service AdminService {
+  // ステータス取得
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+
+  // 一時停止
+  rpc Pause(PauseRequest) returns (PauseResponse);
+
+  // 再開
+  rpc Resume(ResumeRequest) returns (ResumeResponse);
+
+  // スキップ
+  rpc Skip(SkipRequest) returns (SkipResponse);
+
+  // リスナーキック
+  rpc Kick(KickRequest) returns (KickResponse);
+
+  // リスナー一覧
+  rpc ListListeners(ListListenersRequest) returns (ListListenersResponse);
+
+  // セッション終了
+  rpc StopSession(StopSessionRequest) returns (StopSessionResponse);
+}
+
+message GetStatusRequest {
+}
+
+message GetStatusResponse {
+  // 現在再生中のトラック情報
+  TrackInfo current_track = 1;
+  // キュー内の楽曲数
+  int32 queue_size = 2;
+  // リスナー数
+  int32 listener_count = 3;
+  // セッション情報
+  SessionInfo session_info = 4;
+}
+
+message PauseRequest {
+}
+
+message PauseResponse {
+  // 成功フラグ
+  bool success = 1;
+  // メッセージ
+  string message = 2;
+}
+
+message ResumeRequest {
+}
+
+message ResumeResponse {
+  // 成功フラグ
+  bool success = 1;
+  // メッセージ
+  string message = 2;
+}
+
+message SkipRequest {
+}
+
+message SkipResponse {
+  // 成功フラグ
+  bool success = 1;
+  // メッセージ
+  string message = 2;
+}
+
+message KickRequest {
+  // キック対象のリスナーID
+  string listener_id = 1;
+}
+
+message KickResponse {
+  // 成功フラグ
+  bool success = 1;
+  // メッセージ
+  string message = 2;
+}
+
+message ListListenersRequest {
+}
+
+message ListListenersResponse {
+  // リスナーリスト
+  repeated ListenerInfo listeners = 1;
+}
+
+message ListenerInfo {
+  // リスナーID（UUID）
+  string listener_id = 1;
+  // 表示名
+  string display_name = 2;
+  // 再生待ち楽曲数
+  int32 pending_tracks = 3;
+  // 参加時刻（RFC3339形式）
+  string joined_at = 4;
+}
+
+message StopSessionRequest {
+}
+
+message StopSessionResponse {
+  // 成功フラグ
+  bool success = 1;
+  // メッセージ
+  string message = 2;
+}

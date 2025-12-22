@@ -1,0 +1,169 @@
+# 19box Server Configuration
+
+session:
+  # セッションのタイトル。Spotifyのプレイリスト名や通知に使用されます。
+  title: "19box Session"
+  
+  # セッション開始時間 (RFC3339形式)。
+  # 空文字("")の場合、サーバー起動直後またはAdmin UIからの開始操作直後にセッションが始まります。
+  # 例: "2023-12-25T18:00:00+09:00"
+  start_time: ""
+  
+  # セッション終了時間 (RFC3339形式)。
+  # 設定された時間になると、エンディングプレイリストの再生に移行します（設定されている場合）。
+  # 空文字の場合、手動停止のみとなります。
+  end_time: ""
+  
+
+  # セッションのテーマやキーワード。
+  # AIによる選曲やメッセージ生成のコンテキストとして使用されます。
+  keywords:
+    - "theme1"
+    - "theme2"
+  
+admin:
+  # Admin APIおよびAdmin Web UIへのアクセスに必要な認証トークン。
+  # セキュリティのため、設定ファイルへの直書きではなく環境変数 ADMIN_TOKEN での設定を推奨します。
+  token: ""
+
+  # 管理者権限を持つユーザーの表示名リスト。
+  # ここに含まれる名前で参加したユーザーは、通常の制限（選曲数制限など）が免除される場合があります。
+  display_names:
+    - "Admin"
+
+playlists:
+  # オープニング用プレイリスト設定
+  opening:
+    # プレイリストURL/URI (Spotify URI または URL)
+    playlist_url: ""
+    # 再生時のリクエスト者表示名
+    display_name: "オープニング"
+  
+  # エンディング用プレイリスト設定
+  ending:
+    # プレイリストURL/URI
+    playlist_url: ""
+    # 再生時のリクエスト者表示名
+    display_name: "エンディング"
+
+playback:
+  # 再生開始通知の遅延時間（ミリ秒）
+  # サーバー内での再生開始から、実際にクライアントへ通知を送るまでの待ち時間を設定します。
+  # リスナーが通知のリンクをクリックした際に、Spotify側で確実に曲が切り替わっている状態にするために使用します。
+  # この遅延は連続再生を含むすべての曲の切り替わり時に適用されます。
+  # 推奨値: 2000-5000（2-5秒）
+  notification_delay_ms: 3000
+
+  # 曲間ギャップ補正時間（ミリ秒）
+  # サーバー内部の再生待ち時間を微調整し、Spotifyクライアントとの累積ズレ（ドリフト）を防止します。
+  # 常に適用され、この時間分だけサーバーの次の再生開始を遅らせます。
+  # 推奨値: 50-200（ミリ秒）
+  gap_correction_ms: 100
+
+
+bgm:
+  # BGM補充の閾値（秒）。
+  # 再生キューの残り時間がこの秒数を下回ると、BGMプロバイダーから曲を追加します。
+  depletion_threshold_sec: 30
+  
+  # 直近の何曲分のアーティストを「最近再生されたアーティスト」として記録するか。
+  # BGM選曲時の重複排除に使用されます。
+  recent_artist_count: 3
+  
+  # BGMプロバイダーの設定リスト。上から順に試行されます。
+  providers:
+    # --- Last.fm プロバイダー設定例 ---
+    # Last.fmのAPIを使用して、シードトラックやタグに基づいた類似曲を提案します。
+    - type: "lastfm"
+      display_name: "Last.fm Recommendations" # BGM追加時のリクエスト者名として表示
+      candidate_count: 5        # 選曲候補として取得する曲数
+      api_key: ""               # 環境変数 LASTFM_API_KEY 推奨
+      seed_track_count: 3       # 類似曲検索の元となる直近の再生履歴数
+      tag_count: 5              # 検索に使用するタグの数（キーワードに基づく）
+      tag_weight: 0.4           # タグ一致度の重み (0.0-1.0)
+      similar_weight: 0.6       # 類似度の重み (0.0-1.0)
+    
+    # --- Playlist プロバイダー設定例 ---
+    # 指定したSpotifyプレイリストからランダムに選曲します（Last.fmのフォールバックなどに利用）。
+    - type: "playlist"
+      display_name: "BGM Playlist"
+      candidate_count: 5
+      playlist_url: "spotify:playlist:..."
+
+filters:
+  # キックされたリスナーからのリクエストを拒否するフィルター
+  kicked_listener_filter:
+    enabled: true
+  
+  # ユーザーごとの再生待ち曲数を制限するフィルター
+  # （1人のユーザーが連続して再生されるのを防ぐなど）
+  user_pending_filter:
+    enabled: true
+  
+  # 重複曲（既にキューにある曲や再生履歴にある曲）を拒否するフィルター
+  duplicate_track_filter:
+    enabled: true
+
+  # 曲の長さ（分）で制限するフィルター
+  duration_limit_filter:
+    enabled: true
+    settings:
+      min_minutes: 0  # 最小（分）: 0 = 制限なし
+      max_minutes: 10 # 最大（分）: 0 = 制限なし
+
+messages:
+  # ユーザー向けメッセージのカスタマイズ
+  
+  # リクエスト成功時
+  success: "リクエストを受け付けました。再生をお楽しみください！"
+ 
+  
+  # リクエスト受付終了時（セッション開始前、終了、停止、または制限時間による）
+  acceptance_done: "選曲受付は終了しました"
+  
+  # 再生予定時刻がセッション終了時刻を超える場合
+  time_limit_exceeded: "この楽曲は終了時刻までに再生完了できません"
+  
+  # リスナーがキックされている場合
+  kicked: "あなたはセッションからキックされています"
+  
+  # 指定されたマーケット（国）で楽曲が再生不可の場合
+  market_restriction: "この楽曲はお住まいの地域では再生できません"
+  
+  # 当該リスナーのリクエスト曲がまだ再生待ち列にある場合（連続投稿制限）
+  user_pending: "あなたの楽曲がまだ再生待ちです。再生されるまでお待ちください"
+  
+  # 同じ楽曲（リマスター版や別バージョン含む）が既にキューにある場合
+  duplicate_track: "この楽曲は既にキュー内にあります（リマスター版を含む）"
+  
+  # Spotify上で楽曲が見つからなかった場合
+  track_not_found: "指定された楽曲が見つかりませんでした"
+  
+  # 無効なリスナーIDの場合
+  invalid_listener: "無効なリスナーIDです"
+
+  # 曲の長さ制限超過時
+  duration_limit_exceeded: "この楽曲は長すぎるか短すぎるためリクエストできません"
+
+  # 不明なエラー発生時
+  default_error: "リクエストを受け付けられませんでした"
+
+
+spotify:
+  # Spotify API設定
+  client_id: ""     # 環境変数: SPOTIFY_CLIENT_ID
+  client_secret: "" # 環境変数: SPOTIFY_CLIENT_SECRET
+  refresh_token: "" # 環境変数: SPOTIFY_REFRESH_TOKEN
+  
+  # 再生可能なマーケット（国コード）。デフォルトは "JP"。
+  market: "JP"
+
+logging:
+  # ログ出力先: "stdout" (標準出力) または "file" (ファイル)
+  output: "stdout"
+  
+  # ログレベル: "debug", "info", "warn", "error"
+  level: "info"
+  
+  # ファイル出力時のファイルパス
+  file: "19box.log"

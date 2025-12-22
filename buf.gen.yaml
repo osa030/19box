@@ -1,0 +1,23 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/osa030/19box/internal/gen
+
+plugins:
+  # Go protobuf
+  - remote: buf.build/protocolbuffers/go
+    out: internal/gen
+    opt: paths=source_relative
+  # Connect RPC for Go
+  - remote: buf.build/connectrpc/go
+    out: internal/gen
+    opt: paths=source_relative
+  # TypeScript/ES for frontend (optional)
+  # Uncomment if you want to generate TypeScript code
+  # - remote: buf.build/connectrpc/es
+  #   out: gen/ts
+  # - remote: buf.build/bufbuild/es
+  #   out: gen/ts
+

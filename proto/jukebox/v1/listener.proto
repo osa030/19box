@@ -1,0 +1,130 @@
+syntax = "proto3";
+
+package jukebox.v1;
+
+
+// リスナー用サービス
+service ListenerService {
+  // セッション参加
+  rpc Join(JoinRequest) returns (JoinResponse);
+
+  // 選曲リクエスト
+  rpc RequestTrack(RequestTrackRequest) returns (RequestTrackResponse);
+
+  // 通知受信（Server Streaming）
+  rpc SubscribeNotifications(SubscribeNotificationsRequest) returns (stream Notification);
+}
+
+message JoinRequest {
+  // リスナーの表示名
+  string display_name = 1;
+  // 外部ユーザーID（Bot連携用、任意）
+  string external_user_id = 2;
+}
+
+message JoinResponse {
+  // リスナーID（UUID）
+  string listener_id = 1;
+}
+
+message RequestTrackRequest {
+  // リスナーID（UUID）
+  string listener_id = 1;
+  // Spotify Track ID
+  string track_id = 2;
+}
+
+message RequestTrackResponse {
+  // リクエスト成功フラグ
+  bool success = 1;
+  // ユーザー向けメッセージ
+  string message = 2;
+  // 拒否時のコード (e.g., "user_pending", "kicked", "market_restriction")
+  string code = 3;
+}
+
+message SubscribeNotificationsRequest {
+}
+
+// 通知タイプ
+enum NotificationType {
+  NOTIFICATION_TYPE_UNSPECIFIED = 0;
+  NOTIFICATION_TYPE_INITIAL_STATE = 1;      // ストリーム開始時の状態
+  NOTIFICATION_TYPE_CHANGE_STATE = 2;       // セッション状態変更
+  NOTIFICATION_TYPE_CHANGE_TRACK = 3;       // トラック状態変更
+}
+
+// トラック状態
+enum TrackState {
+  TRACK_STATE_UNSPECIFIED = 0;
+  TRACK_STATE_STARTED = 1;                   // トラック再生開始
+  TRACK_STATE_SKIPPED = 2;                   // トラック再生スキップ
+  TRACK_STATE_PLAYING = 3;                   // トラック再生中
+  TRACK_STATE_PAUSED = 4;                    // トラック一時停止中
+}
+
+message Notification {
+  // 通知タイプ
+  NotificationType type = 1;
+  // シーケンス番号
+  uint64 sequence_no = 2;
+  // セッション情報
+  SessionInfo session_info = 3;
+  // トラック情報
+  TrackInfo track_info = 4;
+}
+
+message SessionInfo {
+  // セッションID
+  string session_id = 1;
+  // プレイリスト名
+  string playlist_name = 2;
+  // プレイリストURL
+  string playlist_url = 3;
+  // セッションのお題/テーマキーワード
+  repeated string keywords = 4;
+  // 開始予定時刻（RFC3339形式、即時開始の場合は現在時刻、未設定の場合は空文字列）
+  string scheduled_start_time = 5;
+  // 終了予定時刻（RFC3339形式、未設定の場合は空文字列）
+  string scheduled_end_time = 6;
+  // セッション状態
+  SessionState state = 7;
+  // リクエスト受付状態
+  bool accepting_requests = 8;
+}
+
+message TrackInfo {
+  // Spotify Track ID
+  string track_id = 1;
+  // 曲名
+  string name = 2;
+  // アーティスト名（複数可）
+  repeated string artists = 3;
+  // Spotify URL
+  string url = 4;
+  // アルバムアートURL
+  string album_art_url = 5;
+  // 選曲者の表示名
+  string requester_name = 6;
+  // 選曲者の外部ユーザーID（Botメンション用、任意）
+  string requester_external_user_id = 7;
+  // セッションプレイリストURL
+  string playlist_url = 8;
+  // 選曲者タイプ (user, opening, ending, bgm)
+  string requester_type = 9;
+  // 現在楽曲の残り時間（秒）
+  int32 remaining_seconds = 10;
+  // トラック状態
+  TrackState state = 11;
+}
+
+// セッション状態
+enum SessionState {
+  SESSION_STATE_UNSPECIFIED = 0;
+  SESSION_STATE_WAITING = 1;              // 開始前
+  SESSION_STATE_RUNNING = 2;              // 実行中
+  SESSION_STATE_PAUSED = 3;               // 一時停止中（手動）
+  SESSION_STATE_WAITING_FOR_TRACKS = 4;   // キューが空で楽曲待ち（自動再開）
+  SESSION_STATE_ENDING = 5;               // 受付終了
+  SESSION_STATE_TERMINATED = 6;           // 終了済み
+}
