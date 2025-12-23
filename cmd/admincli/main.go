@@ -211,8 +211,12 @@ func listListeners(ctx context.Context, client jukeboxv1connect.AdminServiceClie
 
 	fmt.Printf("Listeners (%d):\n", len(resp.Msg.Listeners))
 	for _, l := range resp.Msg.Listeners {
+		displayName := l.DisplayName
+		if l.IsKicked {
+			displayName = "[KICKED] " + displayName
+		}
 		fmt.Printf("  %s: %s (pending: %d, joined: %s)\n",
-			l.ListenerId, l.DisplayName, l.PendingTracks, l.JoinedAt)
+			l.ListenerId, displayName, l.PendingTracks, l.JoinedAt)
 	}
 }
 

@@ -102,6 +102,8 @@ message ListenerInfo {
   int32 pending_tracks = 3;
   // 参加時刻（RFC3339形式）
   string joined_at = 4;
+  // キック状態
+  bool is_kicked = 5;
 }
 
 message StopSessionRequest {

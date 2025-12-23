@@ -137,6 +137,7 @@ func (s *AdminService) ListListeners(
 			DisplayName:   l.DisplayName,
 			PendingTracks: int32(l.PendingTracks),
 			JoinedAt:      l.JoinedAt.Format(time.RFC3339),
+			IsKicked:      l.IsKicked,
 		}
 	}
 

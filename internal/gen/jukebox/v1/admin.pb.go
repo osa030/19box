@@ -588,7 +588,9 @@ type ListenerInfo struct {
 	// 再生待ち楽曲数
 	PendingTracks int32 `protobuf:"varint,3,opt,name=pending_tracks,json=pendingTracks,proto3" json:"pending_tracks,omitempty"`
 	// 参加時刻（RFC3339形式）
-	JoinedAt      string `protobuf:"bytes,4,opt,name=joined_at,json=joinedAt,proto3" json:"joined_at,omitempty"`
+	JoinedAt string `protobuf:"bytes,4,opt,name=joined_at,json=joinedAt,proto3" json:"joined_at,omitempty"`
+	// キック状態
+	IsKicked      bool `protobuf:"varint,5,opt,name=is_kicked,json=isKicked,proto3" json:"is_kicked,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -649,6 +651,13 @@ func (x *ListenerInfo) GetJoinedAt() string {
 		return x.JoinedAt
 	}
 	return ""
+}
+
+func (x *ListenerInfo) GetIsKicked() bool {
+	if x != nil {
+		return x.IsKicked
+	}
+	return false
 }
 
 type StopSessionRequest struct {
@@ -774,13 +783,14 @@ const file_jukebox_v1_admin_proto_rawDesc = "" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"\x16\n" +
 	"\x14ListListenersRequest\"O\n" +
 	"\x15ListListenersResponse\x126\n" +
-	"\tlisteners\x18\x01 \x03(\v2\x18.jukebox.v1.ListenerInfoR\tlisteners\"\x96\x01\n" +
+	"\tlisteners\x18\x01 \x03(\v2\x18.jukebox.v1.ListenerInfoR\tlisteners\"\xb3\x01\n" +
 	"\fListenerInfo\x12\x1f\n" +
 	"\vlistener_id\x18\x01 \x01(\tR\n" +
 	"listenerId\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12%\n" +
 	"\x0epending_tracks\x18\x03 \x01(\x05R\rpendingTracks\x12\x1b\n" +
-	"\tjoined_at\x18\x04 \x01(\tR\bjoinedAt\"\x14\n" +
+	"\tjoined_at\x18\x04 \x01(\tR\bjoinedAt\x12\x1b\n" +
+	"\tis_kicked\x18\x05 \x01(\bR\bisKicked\"\x14\n" +
 	"\x12StopSessionRequest\"I\n" +
 	"\x13StopSessionResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
