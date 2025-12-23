@@ -233,3 +233,76 @@ func TestConfig_ParseEndTime(t *testing.T) {
 		})
 	}
 }
+func TestConfig_validateTimeConsistency(t *testing.T) {
+	future1 := "2099-01-01T12:00:00Z"
+	future2 := "2099-01-01T13:00:00Z"
+
+	tests := []struct {
+		name      string
+		startTime string
+		endTime   string
+		wantErr   bool
+		errMsg    string
+	}{
+		{
+			name:      "valid: both set",
+			startTime: future1,
+			endTime:   future2,
+			wantErr:   false,
+		},
+		{
+			name:      "invalid: start after end",
+			startTime: future2,
+			endTime:   future1,
+			wantErr:   true,
+			errMsg:    "must be before end_time",
+		},
+		{
+			name:      "invalid: start equals end",
+			startTime: future1,
+			endTime:   future1,
+			wantErr:   true,
+			errMsg:    "must be before end_time",
+		},
+		{
+			name:      "valid: only startTime set",
+			startTime: future1,
+			endTime:   "",
+			wantErr:   false,
+		},
+		{
+			name:      "valid: only endTime set",
+			startTime: "",
+			endTime:   future1,
+			wantErr:   false,
+		},
+		{
+			name:      "valid: none set",
+			startTime: "",
+			endTime:   "",
+			wantErr:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{
+				Session: SessionConfig{
+					StartTime: tt.startTime,
+					EndTime:   tt.endTime,
+				},
+			}
+
+			err := cfg.validateTimeConsistency()
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errMsg != "" {
+					assert.Contains(t, err.Error(), tt.errMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

@@ -218,12 +218,17 @@ func (c *Config) Validate() error {
 func (c *Config) validateTimeConsistency() error {
 	now := time.Now()
 
+	var startTime, endTime time.Time
+	var hasStart, hasEnd bool
+
 	// Check start_time if it's set
 	if c.Session.StartTime != "" {
-		startTime, err := time.Parse(time.RFC3339, c.Session.StartTime)
+		st, err := time.Parse(time.RFC3339, c.Session.StartTime)
 		if err != nil {
 			return errors.Wrap(err, "failed to parse start_time")
 		}
+		startTime = st
+		hasStart = true
 
 		// Check if start_time is in the past
 		if startTime.Before(now) {
@@ -233,14 +238,23 @@ func (c *Config) validateTimeConsistency() error {
 
 	// Check end_time if it's set
 	if c.Session.EndTime != "" {
-		endTime, err := time.Parse(time.RFC3339, c.Session.EndTime)
+		et, err := time.Parse(time.RFC3339, c.Session.EndTime)
 		if err != nil {
 			return errors.Wrap(err, "failed to parse end_time")
 		}
+		endTime = et
+		hasEnd = true
 
 		// Check if end_time is in the past
 		if endTime.Before(now) {
 			return errors.Newf("end_time (%s) must be in the future (current time: %s)", c.Session.EndTime, now.Format(time.RFC3339))
+		}
+	}
+
+	// Check if start_time is before end_time
+	if hasStart && hasEnd {
+		if !startTime.Before(endTime) {
+			return errors.Newf("start_time (%s) must be before end_time (%s)", c.Session.StartTime, c.Session.EndTime)
 		}
 	}
 
