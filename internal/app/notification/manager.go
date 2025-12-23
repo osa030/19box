@@ -37,26 +37,23 @@ func NewManager() *Manager {
 	}
 }
 
-// Subscribe adds a new subscription and returns the subscription ID.
-func (m *Manager) Subscribe(stream Stream) string {
+// Subscribe adds a new subscription and returns the subscription ID and current sequence number.
+func (m *Manager) Subscribe(stream Stream) (string, uint64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	m.sequenceNoMu.Lock()
+	seq := m.sequenceNo
+	m.sequenceNoMu.Unlock()
 
 	id := uuid.New().String()
 	m.subscriptions[id] = &subscription{
 		id:     id,
 		stream: stream,
 	}
-	return id
+	return id, seq
 }
 
-// NextSequenceNo returns the next sequence number and increments the counter.
-func (m *Manager) NextSequenceNo() uint64 {
-	m.sequenceNoMu.Lock()
-	defer m.sequenceNoMu.Unlock()
-	m.sequenceNo++
-	return m.sequenceNo
-}
 
 // Unsubscribe removes a subscription.
 func (m *Manager) Unsubscribe(subscriptionID string) {

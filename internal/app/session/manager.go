@@ -796,9 +796,12 @@ func (m *Manager) onStateChanged(pbState playback.State, qt *track.QueuedTrack) 
 	case playback.StatePaused:
 		logMsg = "broadcast SESSION_PAUSED"
 	case playback.StatePlaying:
-		logMsg = "broadcast SESSION_RESUMED"
+		logMsg = "broadcast SESSION_STATE_CHANGE: RUNNING"
+	case playback.StateIdle:
+		logMsg = "broadcast SESSION_STATE_CHANGE: IDLE"
 	default:
-		return
+		// Unknown state, but we'll still broadcast it to be safe if it's a valid change
+		logMsg = fmt.Sprintf("broadcast SESSION_STATE_CHANGE: %s", pbState)
 	}
 	zlog.Info().Msg(logMsg)
 

@@ -3,8 +3,10 @@ package connect
 
 import (
 	"context"
+	"sync"
 
 	"connectrpc.com/connect"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/osa030/19box/internal/app/session"
 	jukeboxv1 "github.com/osa030/19box/internal/gen/jukebox/v1"
@@ -73,14 +75,18 @@ func (s *ListenerService) SubscribeNotifications(
 	req *connect.Request[jukeboxv1.SubscribeNotificationsRequest],
 	stream *connect.ServerStream[jukeboxv1.Notification],
 ) error {
-	// 1. シーケンス番号を取得
 	notifManager := s.session.GetNotificationManager()
-	sequenceNo := notifManager.NextSequenceNo()
+
+	// 1. アダプターを用意し、購読を開始する
+	// INITIAL_STATE送信前に届いた通知をバッファリングするため、Flushが必要
+	adapter := &notificationStreamAdapter{stream: stream}
+	subscriptionID, sequenceNo := notifManager.Subscribe(adapter)
+	defer notifManager.Unsubscribe(subscriptionID)
 
 	// 2. 現在の状態を取得
 	status := s.session.GetStatus()
 
-	// 3. 初期状態をNotificationとして構築
+	// 3. 初期状態をNotificationとして構築 (sequenceNo は Subscribe 時のものを利用)
 	initialNotification := &jukeboxv1.Notification{
 		Type:        jukeboxv1.NotificationType_NOTIFICATION_TYPE_INITIAL_STATE,
 		SequenceNo:  sequenceNo,
@@ -89,13 +95,15 @@ func (s *ListenerService) SubscribeNotifications(
 	}
 
 	// 4. 初期状態を送信
+	zlog.Debug().Interface("notification", initialNotification).Msg("sending INITIAL_STATE notification")
 	if err := stream.Send(initialNotification); err != nil {
 		return err
 	}
 
-	// 4. 通常の通知ストリームを開始
-	adapter := &notificationStreamAdapter{stream: stream}
-	subscriptionID := notifManager.Subscribe(adapter)
+	// 5. バッファリングされていた通知をフラッシュし、それ以降は直接送信するようにする
+	if err := adapter.Flush(); err != nil {
+		return err
+	}
 
 	// Wait for context cancellation or session end
 	select {
@@ -103,17 +111,41 @@ func (s *ListenerService) SubscribeNotifications(
 	case <-s.session.Done():
 	}
 
-	// Unsubscribe when done
-	notifManager.Unsubscribe(subscriptionID)
-
 	return nil
 }
 
 // notificationStreamAdapter adapts connect.ServerStream to notification.Stream.
 type notificationStreamAdapter struct {
+	mu     sync.Mutex
 	stream *connect.ServerStream[jukeboxv1.Notification]
+	buffer []*jukeboxv1.Notification
+	ready  bool
 }
 
 func (a *notificationStreamAdapter) Send(notification *jukeboxv1.Notification) error {
+	a.mu.Lock()
+	if !a.ready {
+		a.buffer = append(a.buffer, notification)
+		a.mu.Unlock()
+		return nil
+	}
+	a.mu.Unlock()
+	zlog.Debug().Interface("notification", notification).Msg("sending notification output")
 	return a.stream.Send(notification)
+}
+
+func (a *notificationStreamAdapter) Flush() error {
+	a.mu.Lock()
+	a.ready = true
+	buffer := a.buffer
+	a.buffer = nil
+	a.mu.Unlock()
+
+	for _, n := range buffer {
+		zlog.Debug().Interface("notification", n).Msg("sending notification output (flushed)")
+		if err := a.stream.Send(n); err != nil {
+			return err
+		}
+	}
+	return nil
 }

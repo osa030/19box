@@ -286,6 +286,13 @@ func (c *Controller) Stop() error {
 	c.pausedElapsed = 0
 	c.notificationTime = time.Time{}
 
+	// Send state change event
+	c.sendEventLocked(Event{
+		Type:  EventStateChanged,
+		Track: nil,
+		State: c.state,
+	})
+
 	return nil
 }
 
@@ -508,6 +515,13 @@ func (c *Controller) playNextLocked(isContinuous bool) error {
 	c.pausedAt = nil
 	c.pausedElapsed = 0
 	c.state = StatePlaying
+
+	// Send state change event
+	c.sendEventLocked(Event{
+		Type:  EventStateChanged,
+		Track: c.currentTrack,
+		State: c.state,
+	})
 
 	// Apply notification delay logic
 	notificationDelay := c.config.NotificationDelay
