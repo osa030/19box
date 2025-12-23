@@ -1,4 +1,14 @@
 # 19box Server Configuration
+server:
+  # サーバーのアドレスとポート
+  addr: ":8080"
+  hooks:
+    # サービス開始後に実行するコマンド
+    on_started:
+      - "echo 'HOOK_STARTED' > hooks_test.txt"
+    # サービス停止時に実行するコマンド
+    on_stopped:
+      - "echo 'HOOK_STOPPED' >> hooks_test.txt"
 
 session:
   # セッションのタイトル。Spotifyのプレイリスト名や通知に使用されます。

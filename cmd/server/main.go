@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-
+	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -178,6 +178,7 @@ func run(cfg *config.Config) error {
 	time.Sleep(100 * time.Millisecond)
 
 	// Execute startup hook if configured (after server is running)
+	executeHooks(cfg.Server.Hooks.OnStarted, "on_started")
 
 
 	// Wait for shutdown signal, session end, or server error
@@ -209,6 +210,10 @@ func run(cfg *config.Config) error {
 	}
 
 	zlog.Info().Msg("Server stopped")
+
+	// Execute shutdown hook if configured
+	executeHooks(cfg.Server.Hooks.OnStopped, "on_stopped")
+
 	return nil
 }
 
@@ -309,4 +314,25 @@ func validatePlaylists(ctx context.Context, cfg *config.Config, spotifyClient *s
 	}
 
 	return nil
+}
+
+// executeHooks runs a list of shell commands.
+func executeHooks(hooks []string, stage string) {
+	if len(hooks) == 0 {
+		return
+	}
+
+	zlog.Info().Msgf("Executing %s hooks (%d commands)", stage, len(hooks))
+
+	for _, hook := range hooks {
+		zlog.Info().Msgf("Executing hook: %s", hook)
+		// Use sh -c to allow shell features like redirection or pipes
+		cmd := exec.Command("sh", "-c", hook)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			zlog.Error().Err(err).Msgf("Failed to execute hook: %s", hook)
+		}
+	}
 }

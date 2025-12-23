@@ -27,7 +27,13 @@ type Config struct {
 // ServerConfig represents server configuration.
 type ServerConfig struct {
 	Addr  string      `yaml:"addr" default:":8080"`
+	Hooks HooksConfig `yaml:"hooks"`
+}
 
+// HooksConfig represents lifecycle hooks configuration.
+type HooksConfig struct {
+	OnStarted []string `yaml:"on_started"`
+	OnStopped []string `yaml:"on_stopped"`
 }
 
 
