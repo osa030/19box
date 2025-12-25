@@ -3,12 +3,14 @@ package connect
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"connectrpc.com/connect"
 	zlog "github.com/rs/zerolog/log"
 
 	"github.com/osa030/19box/internal/app/session"
+	"github.com/osa030/19box/internal/app/session/registry"
 	jukeboxv1 "github.com/osa030/19box/internal/gen/jukebox/v1"
 	"github.com/osa030/19box/internal/gen/jukebox/v1/jukeboxv1connect"
 	"github.com/osa030/19box/internal/infra/config"
@@ -38,6 +40,9 @@ func (s *ListenerService) Join(
 ) (*connect.Response[jukeboxv1.JoinResponse], error) {
 	listenerID, err := s.session.Join(req.Msg.DisplayName, req.Msg.ExternalUserId)
 	if err != nil {
+		if errors.Is(err, registry.ErrListenerKicked) {
+			return nil, connect.NewError(connect.CodePermissionDenied, err)
+		}
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 

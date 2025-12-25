@@ -31,16 +31,30 @@ func (r *ListenerRegistry) Join(displayName, externalUserID string, isVIP bool) 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// Check if already joined (by external ID)
+	// Check for existing session
+	// 1. By external user ID (bot users, etc.)
 	if externalUserID != "" {
 		for _, session := range r.listeners {
-			if session.ExternalUserID == externalUserID && !session.IsKicked {
+			if session.ExternalUserID == externalUserID {
+				if session.IsKicked {
+					return "", ErrListenerKicked
+				}
+				return session.ID, nil
+			}
+		}
+	} else {
+		// 2. By display name (web users without external ID)
+		for _, session := range r.listeners {
+			if session.DisplayName == displayName && session.ExternalUserID == "" {
+				if session.IsKicked {
+					return "", ErrListenerKicked
+				}
 				return session.ID, nil
 			}
 		}
 	}
 
-	// Generate new ID
+	// Create new session if not found
 	id := uuid.New().String()
 	session := listener.NewSession(id, displayName, externalUserID, isVIP)
 	r.listeners[id] = session
