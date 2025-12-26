@@ -1,11 +1,10 @@
 package registry
 
 import (
-	"sync"
-
 	"github.com/cockroachdb/errors"
 	"github.com/google/uuid"
 	"github.com/osa030/19box/internal/domain/listener"
+	"github.com/puzpuzpuz/xsync/v3"
 )
 
 var (
@@ -15,13 +14,14 @@ var (
 
 // ListenerRegistry manages listener sessions with thread-safe access.
 type ListenerRegistry struct {
-	mu        sync.RWMutex
+	mu        *xsync.RBMutex
 	listeners map[string]*listener.Session
 }
 
 // NewListenerRegistry creates a new listener registry.
 func NewListenerRegistry() *ListenerRegistry {
 	return &ListenerRegistry{
+		mu:        xsync.NewRBMutex(),
 		listeners: make(map[string]*listener.Session),
 	}
 }
@@ -64,8 +64,8 @@ func (r *ListenerRegistry) Join(displayName, externalUserID string, isVIP bool) 
 
 // Get retrieves a listener session by ID.
 func (r *ListenerRegistry) Get(listenerID string) (*listener.Session, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	token := r.mu.RLock()
+	defer r.mu.RUnlock(token)
 
 	session, ok := r.listeners[listenerID]
 	if !ok {
@@ -76,8 +76,8 @@ func (r *ListenerRegistry) Get(listenerID string) (*listener.Session, error) {
 
 // Validate checks if a listener exists and is valid (not kicked).
 func (r *ListenerRegistry) Validate(listenerID string) error {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	token := r.mu.RLock()
+	defer r.mu.RUnlock(token)
 
 	session, ok := r.listeners[listenerID]
 	if !ok {
@@ -127,8 +127,8 @@ func (r *ListenerRegistry) DecrementPending(listenerID string) {
 
 // All returns all listener sessions.
 func (r *ListenerRegistry) All() []*listener.Session {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	token := r.mu.RLock()
+	defer r.mu.RUnlock(token)
 
 	result := make([]*listener.Session, 0, len(r.listeners))
 	for _, session := range r.listeners {
@@ -139,7 +139,7 @@ func (r *ListenerRegistry) All() []*listener.Session {
 
 // Count returns the number of listeners.
 func (r *ListenerRegistry) Count() int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	token := r.mu.RLock()
+	defer r.mu.RUnlock(token)
 	return len(r.listeners)
 }

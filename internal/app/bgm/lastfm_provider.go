@@ -14,6 +14,7 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/go-playground/validator/v10"
 	"github.com/mitchellh/mapstructure"
+	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/osa030/19box/internal/domain/track"
 	"github.com/osa030/19box/internal/infra/lastfm"
@@ -42,9 +43,8 @@ type LastFmProvider struct {
 	spotify SpotifyClient
 
 	// Cache for Spotify search results
-	spotifySearchCache map[string]*track.Track
+	spotifySearchCache *xsync.MapOf[string, *track.Track]
 	candidateCache     []track.Track
-	cacheMutex         sync.RWMutex
 
 	// Configuration
 	candidateCount int
@@ -88,9 +88,8 @@ func NewLastFmProvider(spotify SpotifyClient, candidateCount int, settings map[s
 	return &LastFmProvider{
 		spotify:            spotify,
 		lastfm:             lastfmClient,
-		spotifySearchCache: make(map[string]*track.Track),
+		spotifySearchCache: xsync.NewMapOf[string, *track.Track](),
 		candidateCache:     make([]track.Track, 0),
-		cacheMutex:         sync.RWMutex{},
 		candidateCount:     candidateCount,
 
 		config: &config}, nil
@@ -322,21 +321,16 @@ func (p *LastFmProvider) searchOnSpotify(ctx context.Context, trackName, artistN
 	key := fmt.Sprintf("%s:%s", trackName, artistName)
 
 	// Check cache
-	p.cacheMutex.RLock()
-	if cached, ok := p.spotifySearchCache[key]; ok {
-		p.cacheMutex.RUnlock()
+	if cached, ok := p.spotifySearchCache.Load(key); ok {
 		return cached
 	}
-	p.cacheMutex.RUnlock()
 
 	// Search on Spotify to get track ID
 	query := fmt.Sprintf("track:%s artist:%s", trackName, artistName)
 	results, err := p.spotify.Search(ctx, query, "track", 1)
 	if err != nil || len(results) == 0 {
 		// Cache nil to avoid repeated failed searches
-		p.cacheMutex.Lock()
-		p.spotifySearchCache[key] = nil
-		p.cacheMutex.Unlock()
+		p.spotifySearchCache.Store(key, nil)
 		return nil
 	}
 
@@ -347,16 +341,12 @@ func (p *LastFmProvider) searchOnSpotify(ctx context.Context, trackName, artistN
 	fullTrack, err := p.spotify.GetTrack(ctx, trackID)
 	if err != nil {
 		// Cache nil to avoid repeated failed searches
-		p.cacheMutex.Lock()
-		p.spotifySearchCache[key] = nil
-		p.cacheMutex.Unlock()
+		p.spotifySearchCache.Store(key, nil)
 		return nil
 	}
 
 	// Cache result
-	p.cacheMutex.Lock()
-	p.spotifySearchCache[key] = fullTrack
-	p.cacheMutex.Unlock()
+	p.spotifySearchCache.Store(key, fullTrack)
 
 	return fullTrack
 }

@@ -8,10 +8,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/puzpuzpuz/xsync/v3"
 	zlog "github.com/rs/zerolog/log"
 )
 
@@ -32,12 +32,9 @@ type Client struct {
 	httpClient *http.Client
 
 	// Cache for track tags
-	trackTagCache map[string]*trackTagCacheEntry
+	trackTagCache *xsync.MapOf[string, *trackTagCacheEntry]
 	// Cache for tag tracks
-	tagTracksCache map[string]*tagTracksCacheEntry
-
-	// Mutex for cache access
-	cacheMu sync.RWMutex
+	tagTracksCache *xsync.MapOf[string, *tagTracksCacheEntry]
 }
 
 // Config represents Last.fm client configuration.
@@ -113,8 +110,8 @@ func New(cfg Config) (*Client, error) {
 		apiKey:         cfg.APIKey,
 		baseURL:        "https://ws.audioscrobbler.com/2.0/",
 		httpClient:     &http.Client{Timeout: 10 * time.Second},
-		trackTagCache:  make(map[string]*trackTagCacheEntry),
-		tagTracksCache: make(map[string]*tagTracksCacheEntry),
+		trackTagCache:  xsync.NewMapOf[string, *trackTagCacheEntry](),
+		tagTracksCache: xsync.NewMapOf[string, *tagTracksCacheEntry](),
 	}, nil
 }
 
@@ -198,13 +195,10 @@ func (c *Client) GetTopTags(ctx context.Context, trackName, artistName string, l
 
 	// Check cache first
 	cacheKey := fmt.Sprintf("tracktag:%s:%s", artistName, trackName)
-	c.cacheMu.RLock()
-	if entry, ok := c.trackTagCache[cacheKey]; ok {
-		c.cacheMu.RUnlock()
+	if entry, ok := c.trackTagCache.Load(cacheKey); ok {
 		zlog.Debug().Msgf("using cached tags for track: %s - %s", artistName, trackName)
 		return entry.tags, nil
 	}
-	c.cacheMu.RUnlock()
 
 	params := url.Values{}
 	params.Set("method", "track.getTopTags")
@@ -256,11 +250,9 @@ func (c *Client) GetTopTags(ctx context.Context, trackName, artistName string, l
 	}
 
 	// Cache the result
-	c.cacheMu.Lock()
-	c.trackTagCache[cacheKey] = &trackTagCacheEntry{
+	c.trackTagCache.Store(cacheKey, &trackTagCacheEntry{
 		tags: tags,
-	}
-	c.cacheMu.Unlock()
+	})
 	zlog.Debug().Msgf("cached tags for track: %s - %s (count: %d)", artistName, trackName, len(tags))
 
 	return tags, nil
@@ -282,13 +274,10 @@ func (c *Client) GetTopTracks(ctx context.Context, tagName string, limit int) ([
 
 	// Check cache first
 	cacheKey := fmt.Sprintf("tagtracks:%s", tagName)
-	c.cacheMu.RLock()
-	if entry, ok := c.tagTracksCache[cacheKey]; ok {
-		c.cacheMu.RUnlock()
+	if entry, ok := c.tagTracksCache.Load(cacheKey); ok {
 		zlog.Debug().Msgf("using cached top tracks for tag: %s", tagName)
 		return entry.tracks, nil
 	}
-	c.cacheMu.RUnlock()
 
 	params := url.Values{}
 	params.Set("method", "tag.getTopTracks")
@@ -336,11 +325,9 @@ func (c *Client) GetTopTracks(ctx context.Context, tagName string, limit int) ([
 	}
 
 	// Cache the result
-	c.cacheMu.Lock()
-	c.tagTracksCache[cacheKey] = &tagTracksCacheEntry{
+	c.tagTracksCache.Store(cacheKey, &tagTracksCacheEntry{
 		tracks: tracks,
-	}
-	c.cacheMu.Unlock()
+	})
 	zlog.Debug().Msgf("cached top tracks for tag: %s (count: %d)", tagName, len(tracks))
 
 	return tracks, nil

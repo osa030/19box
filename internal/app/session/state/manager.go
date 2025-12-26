@@ -1,15 +1,15 @@
 package state
 
 import (
-	"sync"
 	"time"
 
-	jukeboxv1 "github.com/osa030/19box/internal/gen/jukebox/v1"
+	"github.com/osa030/19box/internal/gen/jukebox/v1"
+	"github.com/puzpuzpuz/xsync/v3"
 )
 
 // Manager manages session state with thread-safe access.
 type Manager struct {
-	mu sync.RWMutex
+	mu *xsync.RBMutex
 
 	// Session identity
 	sessionID    string
@@ -33,6 +33,7 @@ type Manager struct {
 // New creates a new state manager.
 func New(sessionID string) *Manager {
 	return &Manager{
+		mu:        xsync.NewRBMutex(),
 		sessionID: sessionID,
 		phase:     PhaseWaiting,
 		accepting: NotAccepting,
@@ -41,8 +42,8 @@ func New(sessionID string) *Manager {
 
 // GetPhase returns the current session phase.
 func (m *Manager) GetPhase() Phase {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	token := m.mu.RLock()
+	defer m.mu.RUnlock(token)
 	return m.phase
 }
 
@@ -55,15 +56,15 @@ func (m *Manager) SetPhase(p Phase) {
 
 // IsAccepting returns true if the session is accepting requests.
 func (m *Manager) IsAccepting() bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	token := m.mu.RLock()
+	defer m.mu.RUnlock(token)
 	return m.accepting == Accepting
 }
 
 // GetAcceptingState returns the accepting state.
 func (m *Manager) GetAcceptingState() AcceptingState {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	token := m.mu.RLock()
+	defer m.mu.RUnlock(token)
 	return m.accepting
 }
 
@@ -91,29 +92,29 @@ func (m *Manager) StopAccepting() {
 // CanAcceptRequests returns true if the session can accept requests.
 // This is true when the session is active and accepting.
 func (m *Manager) CanAcceptRequests() bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	token := m.mu.RLock()
+	defer m.mu.RUnlock(token)
 	return m.phase == PhaseActive && m.accepting == Accepting
 }
 
 // GetSessionID returns the session ID.
 func (m *Manager) GetSessionID() string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	token := m.mu.RLock()
+	defer m.mu.RUnlock(token)
 	return m.sessionID
 }
 
 // GetPlaylistURL returns the playlist URL.
 func (m *Manager) GetPlaylistURL() string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	token := m.mu.RLock()
+	defer m.mu.RUnlock(token)
 	return m.playlistURL
 }
 
 // GetPlaylistID returns the playlist ID.
 func (m *Manager) GetPlaylistID() string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	token := m.mu.RLock()
+	defer m.mu.RUnlock(token)
 	return m.playlistID
 }
 
@@ -143,8 +144,8 @@ func (m *Manager) SetTimes(start, end *time.Time) {
 
 // GetTimes returns the start and end times.
 func (m *Manager) GetTimes() (*time.Time, *time.Time) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	token := m.mu.RLock()
+	defer m.mu.RUnlock(token)
 	return m.startTime, m.endTime
 }
 
@@ -157,15 +158,15 @@ func (m *Manager) SetEndingDuration(d time.Duration) {
 
 // GetEndingDuration returns the ending duration.
 func (m *Manager) GetEndingDuration() time.Duration {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	token := m.mu.RLock()
+	defer m.mu.RUnlock(token)
 	return m.endingDuration
 }
 
 // BuildSessionInfo creates a complete SessionInfo with all fields.
 func (m *Manager) BuildSessionInfo() *jukeboxv1.SessionInfo {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	token := m.mu.RLock()
+	defer m.mu.RUnlock(token)
 	return m.buildSessionInfoLocked()
 }
 
