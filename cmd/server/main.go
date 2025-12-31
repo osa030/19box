@@ -26,6 +26,7 @@ import (
 	"github.com/osa030/19box/internal/infra/config"
 	"github.com/osa030/19box/internal/infra/logger"
 	"github.com/osa030/19box/internal/infra/spotify"
+	"github.com/osa030/19box/internal/infra/timezone"
 )
 
 var (
@@ -39,6 +40,9 @@ var (
 )
 
 func init() {
+	// Initialize timezone for Android (no-op on other platforms)
+	timezone.Init()
+
 	// start command (default) - no need to store the command
 	app.Command("start", "Start the server (default)").Default()
 }
