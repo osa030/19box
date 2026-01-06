@@ -5,7 +5,7 @@
 *.so
 *.dylib
 bin/
-
+android/
 
 # Test binary
 *.test
