@@ -1,0 +1,67 @@
+# 19box WEB-Admin Configuration
+
+#------------------
+# Server設定
+#------------------
+server:
+  addr: ":8081"
+  
+19box:
+  path: bin/19box-server
+  base_config: config/server_base.yaml
+  admin_token: "" 
+
+#------------------
+# プリセット設定
+#
+# キー名称は任意で設定できます。
+# - session(ブラウザ上で編集可能)
+# - playlists(ブラウザ上で編集可能)
+# - server.hooks (編集不可)
+#
+# 選択したプリセット値をbase_configに反映させた一時設定ファイルを使って
+# 19boxを起動します。
+#------------------
+presets:
+ daily:
+  description: "平日日中BGM"
+  session:
+    title: ""
+    start_time: ""
+    end_time: ""
+    keywords: ["テーマフリー"]
+  playlists:
+    opening:
+      playlist_url: ""
+      display_name: ""
+    ending:
+      playlist_url: ""
+      display_name: ""
+  server:
+    hooks:
+      on_started:
+        - "echo 'daily on_started' > hooks_test.txt"
+      on_stopped:
+        - "echo 'daily on_stopped' >> hooks_test.txt"
+
+ weekend:
+  description: "週末夜開催用"
+  session:
+    title: ""
+    start_time: ""
+    end_time: ""
+    keywords: []
+  playlists:
+    opening:
+      playlist_url: "https://open.spotify.com/playlist/XXXXXX"
+      display_name: "select by admin"
+    ending:
+      playlist_url: "https://open.spotify.com/playlist/YYYYY"
+      display_name: "select by admin"
+  server:
+    hooks:
+      on_started:
+        - "echo 'weekly on_started' > hooks_test.txt"
+      on_stopped:
+        - "echo 'weekly on_stopped' >> hooks_test.txt"
+

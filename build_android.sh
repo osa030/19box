@@ -11,3 +11,4 @@ export CC="$TOOLCHAIN_BIN/aarch64-linux-android34-clang"
 echo "Using Android NDK CC=$CC"
 
 GOOS=android GOARCH=arm64 CGO_ENABLED=1 go build -o $BIN_DIR/19box-server ./cmd/server
+GOOS=android GOARCH=arm64 CGO_ENABLED=1 go build -o $BIN_DIR/19box-webadmin ./cmd/webadmin

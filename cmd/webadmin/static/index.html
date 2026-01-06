@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>19box Web Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-title">
+                <span class="logo">🎵</span>
+                <h1>19box Web Admin</h1>
+            </div>
+            <div class="header-controls">
+                <div class="status-indicator" id="statusIndicator">
+                    <span class="status-dot stopped"></span>
+                    <span class="status-text">Stopped</span>
+                </div>
+                <button id="stopBtn" class="btn btn-danger btn-sm hidden">⏹ Stop Server</button>
+            </div>
+        </header>
+
+        <!-- Setup View (shown when stopped) -->
+        <main id="setupView" class="view">
+            <!-- Preset Selection -->
+            <section class="card">
+                <h2 class="card-title">Preset</h2>
+                <select id="presetSelect" class="input-full">
+                    <option value="">-- Select Preset --</option>
+                </select>
+            </section>
+
+            <!-- Session Settings -->
+            <section class="card">
+                <h2 class="card-title">Session Settings</h2>
+                <div class="form-group">
+                    <label for="sessionTitle">Title</label>
+                    <input type="text" id="sessionTitle" class="input-full" placeholder="Session Title">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="startTime">Start Time</label>
+                        <input type="text" id="startTime" class="input-full datetime-picker" placeholder="Immediate">
+                    </div>
+                    <div class="form-group">
+                        <label for="endTime">End Time</label>
+                        <input type="text" id="endTime" class="input-full datetime-picker" placeholder="Manual">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="keywords">Keywords <span class="hint">(comma-separated)</span></label>
+                    <input type="text" id="keywords" class="input-full" placeholder="rock, jazz, 80s">
+                </div>
+            </section>
+
+            <!-- Playlist Settings -->
+            <section class="card">
+                <h2 class="card-title">Playlist Settings</h2>
+                <div class="form-group">
+                    <label for="openingUrl">Opening Playlist URL</label>
+                    <input type="text" id="openingUrl" class="input-full"
+                        placeholder="https://open.spotify.com/playlist/...">
+                </div>
+                <div class="form-group">
+                    <label for="openingName">Opening Display Name</label>
+                    <input type="text" id="openingName" class="input-full" placeholder="Opening">
+                </div>
+                <div class="form-group">
+                    <label for="endingUrl">Ending Playlist URL</label>
+                    <input type="text" id="endingUrl" class="input-full"
+                        placeholder="https://open.spotify.com/playlist/...">
+                </div>
+                <div class="form-group">
+                    <label for="endingName">Ending Display Name</label>
+                    <input type="text" id="endingName" class="input-full" placeholder="Ending">
+                </div>
+            </section>
+            <!-- Server Hooks (Read-only) -->
+            <section class="card">
+                <h2 class="card-title">Server Hooks <span class="hint">(Read-only)</span></h2>
+                <div class="hooks-display" id="hooksDisplay">
+                    <div class="empty-state">No hooks configured</div>
+                </div>
+            </section>
+
+            <!-- Start Button -->
+            <button id="startBtn" class="btn btn-primary btn-large">
+                🚀 Start Server
+            </button>
+        </main>
+
+        <!-- Control View (shown when running) -->
+        <main id="controlView" class="view hidden">
+            <!-- Controls -->
+            <section class="card">
+                <h2 class="card-title">Controls</h2>
+                <div class="control-buttons">
+                    <button id="pauseBtn" class="btn btn-secondary">⏸ Pause</button>
+                    <button id="resumeBtn" class="btn btn-secondary">▶ Resume</button>
+                    <button id="skipBtn" class="btn btn-secondary">⏭ Skip</button>
+                    <button id="sessionStopBtn" class="btn btn-warning">🏁 Stop Session</button>
+                </div>
+            </section>
+
+            <!-- Session Status -->
+            <section class="card">
+                <h2 class="card-title">Session Status</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-label">Title</span>
+                        <span class="status-value" id="infoTitle">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">State</span>
+                        <span class="status-value" id="infoState">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Schedule</span>
+                        <span class="status-value" id="infoSchedule">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Queue / Listeners</span>
+                        <span class="status-value" id="infoStats">-</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Now Playing -->
+            <section class="card">
+                <h2 class="card-title">Now Playing</h2>
+                <div id="nowPlaying" class="now-playing">
+                    <div class="track-info">
+                        <span class="track-icon">🎵</span>
+                        <div class="track-details">
+                            <div class="track-name" id="trackName">No track playing</div>
+                            <div class="track-meta">
+                                <span id="trackRequester">-</span>
+                                <span class="separator">|</span>
+                                <span id="trackRemaining">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Listeners -->
+            <section class="card">
+                <h2 class="card-title">Listeners</h2>
+                <div id="listenerList" class="listener-list">
+                    <div class="empty-state">No listeners</div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Toast Container -->
+        <div id="toastContainer" class="toast-container"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
