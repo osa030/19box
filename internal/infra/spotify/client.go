@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/rand"
+	"net"
 	"strings"
 	"time"
 
@@ -488,14 +489,28 @@ func isRetryable(err error) bool {
 	if err == nil {
 		return false
 	}
-	// Rate limit errors and server errors are retryable
+	// Rate limit errors, server errors, and network errors are retryable
 	errStr := err.Error()
+
+	// Check for net.Error
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		if netErr.Timeout() || netErr.Temporary() {
+			return true
+		}
+	}
+
 	return strings.Contains(errStr, "rate limit") ||
 		strings.Contains(errStr, "429") ||
 		strings.Contains(errStr, "500") ||
 		strings.Contains(errStr, "502") ||
 		strings.Contains(errStr, "503") ||
-		strings.Contains(errStr, "504")
+		strings.Contains(errStr, "504") ||
+		strings.Contains(errStr, "connection refused") ||
+		strings.Contains(errStr, "connection reset") ||
+		strings.Contains(errStr, "network is unreachable") ||
+		strings.Contains(errStr, "dial tcp") ||
+		strings.Contains(errStr, "software caused connection abort")
 }
 
 // extractPlaylistID extracts the playlist ID from a Spotify playlist URL or URI.
