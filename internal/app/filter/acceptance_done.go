@@ -46,7 +46,7 @@ func (f *AcceptanceDoneFilter) Description() string {
 }
 
 func (f *AcceptanceDoneFilter) ReturnCodes() []string {
-	return []string{"acceptance_done", "time_limit_exceeded"}
+	return []string{"acceptance_done"}
 }
 
 func (f *AcceptanceDoneFilter) ValidateConfig(settings map[string]any) error {
@@ -75,7 +75,7 @@ func (f *AcceptanceDoneFilter) Check(ctx context.Context, req TrackRequest, t tr
 		// First check: if current time has already passed the deadline, reject immediately
 		// This prevents accepting requests even when queue is empty
 		if now.After(deadline) {
-			return Reject("time_limit_exceeded")
+			return Reject("acceptance_done")
 		}
 
 		// Second check: calculate playback start time:
@@ -88,7 +88,7 @@ func (f *AcceptanceDoneFilter) Check(ctx context.Context, req TrackRequest, t tr
 		playbackStartTime := now.Add(currentRemaining).Add(queueDuration)
 
 		if playbackStartTime.After(deadline) || playbackStartTime.Equal(deadline) {
-			return Reject("time_limit_exceeded")
+			return Reject("acceptance_done")
 		}
 	}
 
