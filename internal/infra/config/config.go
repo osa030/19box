@@ -96,7 +96,6 @@ type MessagesConfig struct {
 	Success               string `yaml:"success"`
 	DefaultError          string `yaml:"default_error"`
 	AcceptanceDone        string `yaml:"acceptance_done"`
-	TimeLimitExceeded     string `yaml:"time_limit_exceeded"`
 	Kicked                string `yaml:"kicked"`
 	MarketRestriction     string `yaml:"market_restriction"`
 	UserPending           string `yaml:"user_pending"`
@@ -174,8 +173,6 @@ func (c *Config) GetMessage(code string) string {
 		return c.Messages.Success
 	case "acceptance_done":
 		return c.Messages.AcceptanceDone
-	case "time_limit_exceeded":
-		return c.Messages.TimeLimitExceeded
 	case "kicked":
 		return c.Messages.Kicked
 	case "market_restriction":

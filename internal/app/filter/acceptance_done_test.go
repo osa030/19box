@@ -63,7 +63,7 @@ func TestAcceptanceDoneFilter_Check(t *testing.T) {
 			// Track start: 10 (current) + 50 (queue) = 60 mins from now
 			// 60 > 55 -> Reject (start time exceeds deadline)
 			wantAccepted: false,
-			wantCode:     "time_limit_exceeded",
+			wantCode:     "acceptance_done",
 		},
 		{
 			name:             "track start exactly at deadline",
@@ -77,7 +77,7 @@ func TestAcceptanceDoneFilter_Check(t *testing.T) {
 			// Track start: 15 (current) + 40 (queue) = 55 mins from now
 			// 55 == 55 -> Reject (start time equals deadline)
 			wantAccepted: false,
-			wantCode:     "time_limit_exceeded",
+			wantCode:     "acceptance_done",
 		},
 		{
 			name:             "track end exceeds but start before deadline",
