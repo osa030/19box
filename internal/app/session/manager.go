@@ -18,6 +18,7 @@ import (
 	"github.com/osa030/19box/internal/app/session/state"
 	"github.com/osa030/19box/internal/domain/listener"
 	"github.com/osa030/19box/internal/domain/track"
+	"github.com/osa030/19box/internal/infra/blacklist"
 	jukeboxv1 "github.com/osa030/19box/internal/gen/jukebox/v1"
 	"github.com/osa030/19box/internal/infra/config"
 	"github.com/osa030/19box/internal/infra/spotify"
@@ -163,6 +164,42 @@ func (m *Manager) setupFilters() {
 			zlog.Error().Msgf("failed to validate duration limit filter config: %v", err)
 		} else {
 			m.filterChain.Add(f)
+		}
+	}
+
+	// Blacklist Filters
+	// Blacklist Track Filter
+	if cfg.IsFilterEnabled("blacklist_track_filter") {
+		path := "config/blacklist.yaml"
+		if settings := cfg.Filters["blacklist_track_filter"].Settings; settings != nil {
+			if p, ok := settings["file"].(string); ok && p != "" {
+				path = p
+			}
+		}
+		bl, err := blacklist.Load(path)
+		if err != nil {
+			zlog.Error().Msgf("failed to load track blacklist from %s: %v", path, err)
+		} else {
+			zlog.Info().Msgf("blacklist_track_filter: loaded track blacklist from %s", path)
+			m.filterChain.Add(filter.NewBlacklistTrackFilter(bl))
+		}
+	}
+
+	// Blacklist Artist Filter
+	if cfg.IsFilterEnabled("blacklist_artist_filter") {
+		path := "config/blacklist.yaml"
+		if settings := cfg.Filters["blacklist_artist_filter"].Settings; settings != nil {
+			if p, ok := settings["file"].(string); ok && p != "" {
+				path = p
+			}
+		}
+
+		bl, err := blacklist.Load(path)
+		if err != nil {
+			zlog.Error().Msgf("failed to load artist blacklist from %s: %v", path, err)
+		} else {
+			zlog.Info().Msgf("blacklist_artist_filter: loaded artist blacklist from %s", path)
+			m.filterChain.Add(filter.NewBlacklistArtistFilter(bl))
 		}
 	}
 }

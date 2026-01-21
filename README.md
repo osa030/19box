@@ -258,6 +258,8 @@ You can manage sessions, playlists, and server configurations through a graphica
 - `user_pending_filter`: Limit to one pending request per user
 - `duplicate_track_filter`: Block duplicate tracks (including remasters)
 - `duplicate_artist_filter`: Block tracks if the artist already has a track in the queue
+- `blacklist_track_filter`: Reject tracks specified in blacklist file
+- `blacklist_artist_filter`: Reject tracks by artists specified in blacklist file
 - `duration_limit_filter`: Limit track duration (min/max minutes)
 
 ### **19box-webadmin**

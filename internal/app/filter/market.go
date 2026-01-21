@@ -50,6 +50,7 @@ func (f *MarketFilter) Check(ctx context.Context, req TrackRequest, t track.Trac
 }
 
 func init() {
-	// Note: This filter requires market config, so we register a placeholder.
-	// The actual filter is created with config in session manager.
+	Register("market_filter", func() Filter {
+		return &MarketFilter{}
+	})
 }

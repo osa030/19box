@@ -118,6 +118,18 @@ filters:
   duplicate_artist_filter:
     enabled: true
 
+  # ブラックリスト記載のトラックを拒否するフィルター
+  blacklist_track_filter:
+    enabled: true
+    settings:
+      file: "config/blacklist.yaml"
+
+  # ブラックリスト記載のアーティストを拒否するフィルター
+  blacklist_artist_filter:
+    enabled: true
+    settings:
+      file: "config/blacklist.yaml"
+
   # 曲の長さ（分）で制限するフィルター
   duration_limit_filter:
     enabled: true
@@ -127,40 +139,23 @@ filters:
 
 messages:
   # ユーザー向けメッセージのカスタマイズ
-  
   # リクエスト成功時
   success: "リクエストを受け付けました。再生をお楽しみください！"
- 
-  
-  # リクエスト受付終了時（セッション開始前、終了、停止、または制限時間による）
-  acceptance_done: "選曲受付は終了しました"
-  
-  # リスナーがキックされている場合
-  kicked: "あなたはセッションからキックされています"
-  
-  # 指定されたマーケット（国）で楽曲が再生不可の場合
-  market_restriction: "この楽曲はお住まいの地域では再生できません"
-  
-  # 当該リスナーのリクエスト曲がまだ再生待ち列にある場合（連続投稿制限）
-  user_pending: "あなたの楽曲がまだ再生待ちです。再生されるまでお待ちください"
-  
-  # 同じ楽曲（リマスター版や別バージョン含む）が既にキューにある場合
-  duplicate_track: "この楽曲は既にキュー内にあります（リマスター版を含む）"
-  
-  # 同じアーティストの楽曲が既にキューにある場合
-  duplicate_artist: "このアーティストの楽曲は既にキュー内にあります"
-  
-  # Spotify上で楽曲が見つからなかった場合
-  track_not_found: "指定された楽曲が見つかりませんでした"
-  
-  # 無効なリスナーIDの場合
-  invalid_listener: "無効なリスナーIDです"
-
-  # 曲の長さ制限超過時
-  duration_limit_exceeded: "この楽曲は長すぎるか短すぎるためリクエストできません"
-
   # 不明なエラー発生時
   default_error: "リクエストを受け付けられませんでした"
+  # フィルター等が返すコードに対応するメッセージ
+  codes:
+    acceptance_done: "選曲受付は終了しました"
+    kicked: "あなたはセッションからキックされています"
+    market_restriction: "この楽曲はお住まいの地域では再生できません"
+    user_pending: "あなたの楽曲がまだ再生待ちです。再生されるまでお待ちください"
+    duplicate_track: "この楽曲は既にキュー内にあります（リマスター版を含む）"
+    duplicate_artist: "このアーティストの楽曲は既にキュー内にあります"
+    blacklisted_track: "この楽曲はリクエストできません"
+    blacklisted_artist: "このアーティストの楽曲はリクエストできません"
+    track_not_found: "指定された楽曲が見つかりませんでした"
+    invalid_listener: "無効なリスナーIDです"
+    duration_limit_exceeded: "この楽曲は長すぎるか短すぎるためリクエストできません"
 
 
 spotify:

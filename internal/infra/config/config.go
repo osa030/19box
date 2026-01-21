@@ -36,8 +36,6 @@ type HooksConfig struct {
 	OnStopped []string `yaml:"on_stopped"`
 }
 
-
-
 // SessionConfig represents session-related configuration.
 type SessionConfig struct {
 	Title     string   `yaml:"title"`
@@ -93,17 +91,9 @@ type FilterConfig struct {
 
 // MessagesConfig represents user-facing messages.
 type MessagesConfig struct {
-	Success               string `yaml:"success"`
-	DefaultError          string `yaml:"default_error"`
-	AcceptanceDone        string `yaml:"acceptance_done"`
-	Kicked                string `yaml:"kicked"`
-	MarketRestriction     string `yaml:"market_restriction"`
-	UserPending           string `yaml:"user_pending"`
-	DuplicateTrack        string `yaml:"duplicate_track"`
-	DuplicateArtist       string `yaml:"duplicate_artist"`
-	TrackNotFound         string `yaml:"track_not_found"`
-	InvalidListener       string `yaml:"invalid_listener"`
-	DurationLimitExceeded string `yaml:"duration_limit_exceeded"`
+	Success      string            `yaml:"success"`
+	DefaultError string            `yaml:"default_error"`
+	Codes        map[string]string `yaml:"codes"`
 }
 
 // SpotifyConfig represents Spotify API configuration.
@@ -169,30 +159,13 @@ func (c *Config) overrideFromEnv() {
 
 // GetMessage returns the message for the given code.
 func (c *Config) GetMessage(code string) string {
-	switch code {
-	case "success":
+	if code == "success" {
 		return c.Messages.Success
-	case "acceptance_done":
-		return c.Messages.AcceptanceDone
-	case "kicked":
-		return c.Messages.Kicked
-	case "market_restriction":
-		return c.Messages.MarketRestriction
-	case "user_pending":
-		return c.Messages.UserPending
-	case "track_not_found":
-		return c.Messages.TrackNotFound
-	case "invalid_listener":
-		return c.Messages.InvalidListener
-	case "duplicate_track":
-		return c.Messages.DuplicateTrack
-	case "duplicate_artist":
-		return c.Messages.DuplicateArtist
-	case "duration_limit_exceeded":
-		return c.Messages.DurationLimitExceeded
-	default:
-		return c.Messages.DefaultError
 	}
+	if msg, ok := c.Messages.Codes[code]; ok {
+		return msg
+	}
+	return c.Messages.DefaultError
 }
 
 // IsAdminDisplayName checks if the given display name is an admin.
