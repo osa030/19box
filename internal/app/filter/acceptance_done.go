@@ -96,6 +96,7 @@ func (f *AcceptanceDoneFilter) Check(ctx context.Context, req TrackRequest, t tr
 }
 
 func init() {
-	// Note: This filter requires runtime dependencies, so we register a placeholder.
-	// The actual filter is created with dependencies in session manager.
+	Register("acceptance_done_filter", func() Filter {
+		return &AcceptanceDoneFilter{}
+	})
 }

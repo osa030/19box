@@ -59,3 +59,9 @@ func (f *BlacklistTrackFilter) Check(
 	}
 	return Accept()
 }
+
+func init() {
+	Register("blacklist_track_filter", func() Filter {
+		return &BlacklistTrackFilter{}
+	})
+}

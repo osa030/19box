@@ -38,7 +38,7 @@ func (f *DuplicateTrackFilter) Name() string {
 
 // Description returns the filter description.
 func (f *DuplicateTrackFilter) Description() string {
-	return "既にキュー内にある楽曲（リマスター版含む）の重複リクエストを拒否。カバー楽曲は別物として許可"
+	return "Rejects track requests if the track is already in the queue (checks for remasters, allows covers)"
 }
 
 // ReturnCodes returns possible return codes.
@@ -162,6 +162,7 @@ func isSameArtist(track1, track2 track.Track) bool {
 
 // Register the filter
 func init() {
-	// Note: Queue Manager will be injected when filter is instantiated
-	// Registration happens in session manager
+	Register("duplicate_track_filter", func() Filter {
+		return &DuplicateTrackFilter{}
+	})
 }

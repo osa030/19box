@@ -76,6 +76,7 @@ func (f *DuplicateArtistFilter) Check(
 
 // Register the filter
 func init() {
-	// Note: Queue Manager will be injected when filter is instantiated
-	// Registration happens in session manager
+	Register("duplicate_artist_filter", func() Filter {
+		return &DuplicateArtistFilter{}
+	})
 }

@@ -61,3 +61,9 @@ func (f *BlacklistArtistFilter) Check(
 	}
 	return Accept()
 }
+
+func init() {
+	Register("blacklist_artist_filter", func() Filter {
+		return &BlacklistArtistFilter{}
+	})
+}
