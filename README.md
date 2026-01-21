@@ -220,6 +220,7 @@ Any of the following formats are accepted:
 - `kicked_listener_filter`: Prevent kicked users from requesting
 - `user_pending_filter`: Limit to one pending request per user
 - `duplicate_track_filter`: Block duplicate tracks (including remasters)
+- `duplicate_artist_filter`: Block tracks if the artist already has a track in the queue
 - `duration_limit_filter`: Limit track duration (min/max minutes)
 
 

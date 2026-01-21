@@ -150,6 +150,11 @@ func (m *Manager) setupFilters() {
 		m.filterChain.Add(filter.NewDuplicateTrackFilter(m.playback))
 	}
 
+	// DuplicateArtistFilter
+	if cfg.IsFilterEnabled("duplicate_artist_filter") {
+		m.filterChain.Add(filter.NewDuplicateArtistFilter(m.playback))
+	}
+
 	// DurationLimitFilter
 	if cfg.IsFilterEnabled("duration_limit_filter") {
 		f := filter.NewDurationLimitFilter()
