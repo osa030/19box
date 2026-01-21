@@ -114,6 +114,10 @@ filters:
   duplicate_track_filter:
     enabled: true
 
+  # 同一アーティストの楽曲が既にキューにある場合に拒否するフィルター
+  duplicate_artist_filter:
+    enabled: true
+
   # 曲の長さ（分）で制限するフィルター
   duration_limit_filter:
     enabled: true
@@ -142,6 +146,9 @@ messages:
   
   # 同じ楽曲（リマスター版や別バージョン含む）が既にキューにある場合
   duplicate_track: "この楽曲は既にキュー内にあります（リマスター版を含む）"
+  
+  # 同じアーティストの楽曲が既にキューにある場合
+  duplicate_artist: "このアーティストの楽曲は既にキュー内にあります"
   
   # Spotify上で楽曲が見つからなかった場合
   track_not_found: "指定された楽曲が見つかりませんでした"

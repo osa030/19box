@@ -100,6 +100,7 @@ type MessagesConfig struct {
 	MarketRestriction     string `yaml:"market_restriction"`
 	UserPending           string `yaml:"user_pending"`
 	DuplicateTrack        string `yaml:"duplicate_track"`
+	DuplicateArtist       string `yaml:"duplicate_artist"`
 	TrackNotFound         string `yaml:"track_not_found"`
 	InvalidListener       string `yaml:"invalid_listener"`
 	DurationLimitExceeded string `yaml:"duration_limit_exceeded"`
@@ -185,6 +186,8 @@ func (c *Config) GetMessage(code string) string {
 		return c.Messages.InvalidListener
 	case "duplicate_track":
 		return c.Messages.DuplicateTrack
+	case "duplicate_artist":
+		return c.Messages.DuplicateArtist
 	case "duration_limit_exceeded":
 		return c.Messages.DurationLimitExceeded
 	default:
