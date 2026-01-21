@@ -118,6 +118,18 @@ filters:
   duplicate_artist_filter:
     enabled: true
 
+  # ブラックリスト記載のトラックを拒否するフィルター
+  blacklist_track_filter:
+    enabled: true
+    settings:
+      file: "config/blacklist.yaml"
+
+  # ブラックリスト記載のアーティストを拒否するフィルター
+  blacklist_artist_filter:
+    enabled: true
+    settings:
+      file: "config/blacklist.yaml"
+
   # 曲の長さ（分）で制限するフィルター
   duration_limit_filter:
     enabled: true
@@ -149,6 +161,12 @@ messages:
   
   # 同じアーティストの楽曲が既にキューにある場合
   duplicate_artist: "このアーティストの楽曲は既にキュー内にあります"
+
+  # ブラックリスト登録曲の場合
+  blacklisted_track: "この楽曲はリクエストできません"
+
+  # ブラックリスト登録アーティストの場合
+  blacklisted_artist: "このアーティストの楽曲はリクエストできません"
   
   # Spotify上で楽曲が見つからなかった場合
   track_not_found: "指定された楽曲が見つかりませんでした"

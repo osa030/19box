@@ -402,8 +402,10 @@ func (c *Client) GetPlaylistURL(playlistID string) string {
 // convertTrack converts a Spotify FullTrack to domain Track.
 func (c *Client) convertTrack(t *spotify.FullTrack) *track.Track {
 	artists := make([]string, len(t.Artists))
+	artistIDs := make([]string, len(t.Artists))
 	for i, a := range t.Artists {
 		artists[i] = a.Name
+		artistIDs[i] = string(a.ID)
 	}
 
 	var albumArt string
@@ -439,6 +441,7 @@ func (c *Client) convertTrack(t *spotify.FullTrack) *track.Track {
 		ID:          string(t.ID),
 		Name:        t.Name,
 		Artists:     artists,
+		ArtistIDs:   artistIDs,
 		Album:       t.Album.Name,
 		AlbumArtURL: albumArt,
 		Duration:    time.Duration(t.Duration) * time.Millisecond,

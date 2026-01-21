@@ -101,6 +101,8 @@ type MessagesConfig struct {
 	UserPending           string `yaml:"user_pending"`
 	DuplicateTrack        string `yaml:"duplicate_track"`
 	DuplicateArtist       string `yaml:"duplicate_artist"`
+	BlacklistedTrack      string `yaml:"blacklisted_track"`
+	BlacklistedArtist     string `yaml:"blacklisted_artist"`
 	TrackNotFound         string `yaml:"track_not_found"`
 	InvalidListener       string `yaml:"invalid_listener"`
 	DurationLimitExceeded string `yaml:"duration_limit_exceeded"`
@@ -188,6 +190,10 @@ func (c *Config) GetMessage(code string) string {
 		return c.Messages.DuplicateTrack
 	case "duplicate_artist":
 		return c.Messages.DuplicateArtist
+	case "blacklisted_track":
+		return c.Messages.BlacklistedTrack
+	case "blacklisted_artist":
+		return c.Messages.BlacklistedArtist
 	case "duration_limit_exceeded":
 		return c.Messages.DurationLimitExceeded
 	default:

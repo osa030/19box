@@ -1,0 +1,14 @@
+# Blacklist configuration
+#
+# このファイルでリクエストを拒否するトラックやアーティストを指定します。
+# You can specify tracks and artists to be rejected in this file.
+
+# トラックブラックリスト (Track IDs)
+# tracks:
+#   - "4uLU6hMCjMI75M1A2tKUQC"  # Rick Astley - Never Gonna Give You Up
+#   - "0ee1DiZF94NSqqpG0XHUzH"  # Example Track
+
+# アーティストブラックリスト (Artist IDs)
+# artists:
+#   - "06HL4z0CvFAxyc27GXpf02"  # Taylor Swift
+#   - "1uNFoZAHBGtllmzznpCI3s"  # Justin Bieber

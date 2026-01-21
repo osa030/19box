@@ -9,6 +9,7 @@ type Track struct {
 	ID          string        // Spotify Track ID
 	Name        string        // Track name
 	Artists     []string      // Artist names
+	ArtistIDs   []string      // Artist IDs (for blacklist filtering)
 	Album       string        // Album name
 	AlbumArtURL string        // Album art URL
 	Duration    time.Duration // Track duration
