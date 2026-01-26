@@ -34,6 +34,7 @@ The system consists of multiple components:
 
 ## Supported Platforms
 - Linux
+- Android (arm64) over Termux
 - Windows,macOS (Maybe, but I haven't tried it)
 ## Installation
 
@@ -58,6 +59,7 @@ go build -o bin/19box-server ./cmd/server
 go build -o bin/19box-admincli ./cmd/admincli
 go build -o bin/19box-usercli ./cmd/usercli
 go build -o bin/19box-auth ./cmd/auth
+go build -o bin/19box-webadmin ./cmd/webadmin
 ```
 
 The binaries will be generated in the `bin/` directory:
@@ -65,6 +67,7 @@ The binaries will be generated in the `bin/` directory:
 - `bin/19box-admincli`
 - `bin/19box-usercli`
 - `bin/19box-auth`
+- `bin/19box-webadmin`
 
 ## Configuration
 
@@ -160,24 +163,58 @@ Any of the following formats are accepted:
 - **Spotify Track ID**:0ee1DiZF94NSqqpG0XHUzH
 
 
+### Using the Web Admin
+
+```bash
+bin/19box-webadmin
+```
+
+The Web Admin interface will be available at http://localhost:8081.
+You can manage sessions, playlists, and server configurations through a graphical interface.
+
+**Key Features:**
+
+1. **Start Server**:
+   - Configure session settings (Title, Schedule, Keywords)
+   - Select Presets (Pre-configured settings)
+   - Set OP/ED Playlists
+   - Start the 19box-server process with customised configuration
+
+2. **Stop Server**:
+   - Stop the running 19box-server process
+
+3. **Operations While Running**:
+   - **Playback Control**: Pause, Resume, Skip tracks
+   - **Session Control**: Stop session (graceful shutdown)
+   - **Monitoring**: View current track, queue size, listener count
+   - **Listener Management**: View connected listeners, Kick users
+
 ## Configuration Reference
 
-### Spotify Settings
+### **19box-server**
 
+#### Server Settings
+- `addr`: Address to bind the server to
+- `hooks`: Configuration for server hooks
+  - `on_started`: Command to run when the server service started
+  - `on_stopped`: Command to run when the server service stopped
+
+#### Admin Settings
+- `admin_token`: Admin token for API authentication
+
+#### Spotify Settings
 - `client_id`: Spotify Client ID
 - `client_secret`: Spotify Client Secret
 - `refresh_token`: Spotify Refresh Token
 - `market`: ISO 3166-1 alpha-2 country code for track availability check (default: "JP")
 
-### Session Settings
-
+#### Session Settings
 - `title`: Session name displayed to users (also used as Spotify playlist name)
 - `start_time`: ISO 8601 timestamp (empty = start immediately)
 - `end_time`: ISO 8601 timestamp (empty = manual end only)
 - `keywords`: Optional theme keywords for the session (used for notifications)
 
-### Playlist Settings
-
+#### Playlist Settings
 - `opening`: Configuration for opening playlist (played at session start)
   - `playlist_url`: Spotify playlist URL or URI
   - `display_name`: Name displayed as the requester
@@ -185,13 +222,13 @@ Any of the following formats are accepted:
   - `playlist_url`: Spotify playlist URL or URI
   - `display_name`: Name displayed as the requester
 
-#### **!! Important Note !!**
+##### **!! Important Note !!**
 - The Spotify API does not permit retrieval of playlists owned by Spotify itself.
 - If specified, the API returns a 404 Not Found error.
 - Ensure that all configured playlists are public playlists created by Spotify users.
 - The same applies to the BGM Provider Playlist.
 
-### Playback Settings
+#### Playback Settings
 
 - `notification_delay_ms`: Delay before playback start notifications in milliseconds (default: 3000)
   - Synchronizes notification timing with actual Spotify playback by delaying only the notification
@@ -206,7 +243,7 @@ Any of the following formats are accepted:
   - Applies to ALL track transitions
   - Recommended values: 50-200 milliseconds
 
-### BGM Settings
+#### BGM Settings
 
 - `depletion_threshold_sec`: Time before track ends to queue next track
 - `recent_artist_count`: Number of recent artists to avoid duplicates
@@ -215,7 +252,7 @@ Any of the following formats are accepted:
   - **Last.fm (experimental)**: Smart recommendations based on tags, similar tracks, and seeds
   - **Playlist**: Random selection from a Spotify playlist
 
-### Filters
+#### Filters
 
 - `kicked_listener_filter`: Prevent kicked users from requesting
 - `user_pending_filter`: Limit to one pending request per user
@@ -225,6 +262,23 @@ Any of the following formats are accepted:
 - `blacklist_artist_filter`: Reject tracks by artists specified in blacklist file
 - `duration_limit_filter`: Limit track duration (min/max minutes)
 
+### **19box-webadmin**
+
+#### Server Settings
+
+- `addr`: Address to bind the webadmin server to
+
+#### 19box-server Settings
+
+- `admin_token`: Admin token for API authentication
+- `base_config`: Path to the base configuration file 
+- `path`: Path to the 19box-server binary
+
+#### Preset Settings
+- `description`: Description of the preset
+- `session`: Configuration for session(see. 19box-server「Session Settings」)
+- `playlists`: Configuration for playlists(see. 19box-server「Playlist Settings」)
+- `server.hooks`: Configuration for server hooks(see. 19box-server「Server Settings」)
 
 ## Development
 
