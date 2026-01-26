@@ -6,6 +6,18 @@ const API_BASE = '';
 let isRunning = false;
 let pollInterval = null;
 let currentServerConfig = {};
+let currentFiltersConfig = {};
+
+// Filter names (matches server_base.yaml)
+const FILTER_NAMES = [
+    'kicked_listener_filter',
+    'user_pending_filter',
+    'duplicate_track_filter',
+    'duplicate_artist_filter',
+    'blacklist_track_filter',
+    'blacklist_artist_filter',
+    'duration_limit_filter',
+];
 
 // DOM Elements
 const setupView = document.getElementById('setupView');
@@ -182,6 +194,29 @@ function populateForm(data) {
         currentServerConfig = {};
         renderHooks(null);
     }
+
+    // Populate filters
+    if (data.filters) {
+        currentFiltersConfig = data.filters;
+        populateFilters(data.filters);
+    } else {
+        currentFiltersConfig = {};
+        // Set all filters to enabled by default
+        FILTER_NAMES.forEach(name => {
+            const checkbox = document.getElementById(`filter_${name}`);
+            if (checkbox) checkbox.checked = true;
+        });
+    }
+}
+
+// Populate filter checkboxes
+function populateFilters(filters) {
+    FILTER_NAMES.forEach(name => {
+        const checkbox = document.getElementById(`filter_${name}`);
+        if (checkbox && filters[name] !== undefined) {
+            checkbox.checked = filters[name].enabled !== false;
+        }
+    });
 }
 
 // Render server hooks
@@ -227,6 +262,10 @@ async function onPresetChange() {
             currentServerConfig = data.server;
             renderHooks(data.server.hooks);
         }
+        if (data.filters) {
+            currentFiltersConfig = data.filters;
+            populateFilters(data.filters);
+        }
     } catch (err) {
         showToast('Failed to load preset: ' + err.message, 'error');
     }
@@ -238,6 +277,15 @@ function getFormData() {
         .split(',')
         .map(k => k.trim())
         .filter(k => k);
+
+    // Collect filter settings from checkboxes
+    const filters = {};
+    FILTER_NAMES.forEach(name => {
+        const checkbox = document.getElementById(`filter_${name}`);
+        if (checkbox) {
+            filters[name] = { enabled: checkbox.checked };
+        }
+    });
 
     return {
         session: {
@@ -257,6 +305,7 @@ function getFormData() {
             },
         },
         server: currentServerConfig,
+        filters: filters,
     };
 }
 

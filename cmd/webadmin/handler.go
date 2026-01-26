@@ -84,14 +84,16 @@ func (h *Handler) handleConfig(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Extract session and playlists from base config
+	// Extract session, playlists, and filters from base config
 	session := h.baseConfig["session"]
 	playlists := h.baseConfig["playlists"]
+	filters := h.baseConfig["filters"]
 
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"session":   session,
 		"playlists": playlists,
 		"server":    h.baseConfig["server"],
+		"filters":   filters,
 		"presets":   presets,
 		"running":   h.pm.IsRunning(),
 	})
@@ -124,6 +126,7 @@ func (h *Handler) handlePreset(w http.ResponseWriter, r *http.Request) {
 		"session":   merged["session"],
 		"playlists": merged["playlists"],
 		"server":    merged["server"],
+		"filters":   merged["filters"],
 	})
 }
 
@@ -132,6 +135,7 @@ type StartRequest struct {
 	Session   map[string]interface{} `json:"session"`
 	Playlists map[string]interface{} `json:"playlists"`
 	Server    map[string]interface{} `json:"server"`
+	Filters   map[string]interface{} `json:"filters"`
 }
 
 // handleServerStart starts the 19box-server.
@@ -158,6 +162,7 @@ func (h *Handler) handleServerStart(w http.ResponseWriter, r *http.Request) {
 		"session":   req.Session,
 		"playlists": req.Playlists,
 		"server":    req.Server,
+		"filters":   req.Filters,
 	}
 	finalConfig := MergeFormData(h.baseConfig, formData)
 

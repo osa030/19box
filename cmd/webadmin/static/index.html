@@ -82,6 +82,63 @@
                     <input type="text" id="endingName" class="input-full" placeholder="Ending">
                 </div>
             </section>
+
+            <!-- Filter Settings -->
+            <section class="card">
+                <h2 class="card-title">Filter Settings</h2>
+                <div class="filter-list" id="filterList">
+                    <div class="filter-item">
+                        <span class="filter-name">Duration Limit Filter</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="filter_duration_limit_filter" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="filter-item">
+                        <span class="filter-name">Kicked Listener Filter</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="filter_kicked_listener_filter" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="filter-item">
+                        <span class="filter-name">User Pending Filter</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="filter_user_pending_filter" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="filter-item">
+                        <span class="filter-name">Duplicate Track Filter(include remastered)</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="filter_duplicate_track_filter" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="filter-item">
+                        <span class="filter-name">Duplicate Artist Filter</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="filter_duplicate_artist_filter" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="filter-item">
+                        <span class="filter-name">Blacklist Track Filter</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="filter_blacklist_track_filter" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="filter-item">
+                        <span class="filter-name">Blacklist Artist Filter</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="filter_blacklist_artist_filter" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
             <!-- Server Hooks (Read-only) -->
             <section class="card">
                 <h2 class="card-title">Server Hooks <span class="hint">(Read-only)</span></h2>

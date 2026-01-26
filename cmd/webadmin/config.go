@@ -36,6 +36,7 @@ type PresetConfig struct {
 	Session     map[string]interface{} `yaml:"session"`
 	Playlists   map[string]interface{} `yaml:"playlists"`
 	Server      map[string]interface{} `yaml:"server"`
+	Filters     map[string]interface{} `yaml:"filters"`
 }
 
 // HooksConfig represents lifecycle hooks configuration.
@@ -166,6 +167,30 @@ func MergeConfig(base map[string]interface{}, preset PresetConfig) map[string]in
 		}
 	}
 
+	// Merge filters settings
+	if preset.Filters != nil {
+		var filters map[string]interface{}
+		if f, ok := result["filters"].(map[string]interface{}); ok {
+			filters = f
+		} else {
+			filters = make(map[string]interface{})
+			result["filters"] = filters
+		}
+
+		for filterName, filterData := range preset.Filters {
+			if fd, ok := filterData.(map[string]interface{}); ok {
+				if existing, ok := filters[filterName].(map[string]interface{}); ok {
+					// Update enabled flag from preset
+					if enabled, ok := fd["enabled"]; ok {
+						existing["enabled"] = enabled
+					}
+				} else {
+					filters[filterName] = fd
+				}
+			}
+		}
+	}
+
 	return result
 }
 
@@ -222,6 +247,31 @@ func MergeFormData(cfg map[string]interface{}, form map[string]interface{}) map[
 				server["hooks"] = hooks
 			} else {
 				result["server"] = map[string]interface{}{"hooks": hooks}
+			}
+		}
+	}
+
+	// Merge filters data
+	if formFilters, ok := form["filters"].(map[string]interface{}); ok {
+		var filters map[string]interface{}
+		if f, ok := result["filters"].(map[string]interface{}); ok {
+			filters = f
+		} else {
+			filters = make(map[string]interface{})
+			result["filters"] = filters
+		}
+
+		for filterName, filterData := range formFilters {
+			if fd, ok := filterData.(map[string]interface{}); ok {
+				if existing, ok := filters[filterName].(map[string]interface{}); ok {
+					// Update enabled flag from form
+					if enabled, ok := fd["enabled"]; ok {
+						existing["enabled"] = enabled
+					}
+				} else {
+					// Create new filter entry
+					filters[filterName] = fd
+				}
 			}
 		}
 	}
