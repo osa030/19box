@@ -33,6 +33,9 @@ var (
 
 	// subscribe command
 	subscribeCmd = app.Command("subscribe", "Subscribe to notifications")
+
+	// queue command
+	queueCmd = app.Command("queue", "Get current queue")
 )
 
 func main() {
@@ -58,6 +61,8 @@ func main() {
 		requestTrack(ctx, client, *requestListener, *requestTrackID)
 	case subscribeCmd.FullCommand():
 		subscribe(ctx, client)
+	case queueCmd.FullCommand():
+		getQueue(ctx, client)
 	}
 }
 
@@ -204,4 +209,51 @@ func printNotification(n *jukeboxv1.Notification) {
 		}
 	}
 	fmt.Println()
+}
+
+func getQueue(ctx context.Context, client jukeboxv1connect.ListenerServiceClient) {
+	resp, err := client.GetQueue(ctx, connect.NewRequest(&jukeboxv1.GetQueueRequest{}))
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	items := resp.Msg.Items
+	if len(items) == 0 {
+		fmt.Println("Queue is empty.")
+		return
+	}
+
+	fmt.Printf("Queue (%d tracks):\n", len(items))
+	fmt.Println("─────────────────────────────────────────────────────────────")
+
+	for i, item := range items {
+		duration := formatDuration(item.DurationSeconds)
+		artists := joinArtists(item.Artists)
+		fmt.Printf("%2d. %s - %s [%s] (by %s, %s)\n",
+			i+1,
+			item.Name,
+			artists,
+			duration,
+			item.RequesterName,
+			item.RequesterType,
+		)
+	}
+}
+
+func formatDuration(seconds int32) string {
+	m := seconds / 60
+	s := seconds % 60
+	return fmt.Sprintf("%d:%02d", m, s)
+}
+
+func joinArtists(artists []string) string {
+	if len(artists) == 0 {
+		return "Unknown"
+	}
+	result := artists[0]
+	for i := 1; i < len(artists); i++ {
+		result += ", " + artists[i]
+	}
+	return result
 }

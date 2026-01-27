@@ -735,6 +735,11 @@ func (m *Manager) GetNotificationManager() *notification.Manager {
 	return m.notification
 }
 
+// GetQueuedTracks returns the queued tracks.
+func (m *Manager) GetQueuedTracks() []track.QueuedTrack {
+	return m.playback.GetQueuedTracks()
+}
+
 // playbackLoop handles playback events.
 func (m *Manager) playbackLoop() {
 	defer func() {

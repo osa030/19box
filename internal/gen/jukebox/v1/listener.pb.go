@@ -759,6 +759,168 @@ func (x *TrackInfo) GetState() TrackState {
 	return TrackState_TRACK_STATE_UNSPECIFIED
 }
 
+type GetQueueRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetQueueRequest) Reset() {
+	*x = GetQueueRequest{}
+	mi := &file_jukebox_v1_listener_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetQueueRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetQueueRequest) ProtoMessage() {}
+
+func (x *GetQueueRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_jukebox_v1_listener_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetQueueRequest.ProtoReflect.Descriptor instead.
+func (*GetQueueRequest) Descriptor() ([]byte, []int) {
+	return file_jukebox_v1_listener_proto_rawDescGZIP(), []int{8}
+}
+
+type GetQueueResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 再生待ち楽曲一覧
+	Items         []*QueueItem `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetQueueResponse) Reset() {
+	*x = GetQueueResponse{}
+	mi := &file_jukebox_v1_listener_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetQueueResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetQueueResponse) ProtoMessage() {}
+
+func (x *GetQueueResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_jukebox_v1_listener_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetQueueResponse.ProtoReflect.Descriptor instead.
+func (*GetQueueResponse) Descriptor() ([]byte, []int) {
+	return file_jukebox_v1_listener_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GetQueueResponse) GetItems() []*QueueItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+type QueueItem struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 曲名
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// アーティスト名
+	Artists []string `protobuf:"bytes,2,rep,name=artists,proto3" json:"artists,omitempty"`
+	// 再生時間（秒）
+	DurationSeconds int32 `protobuf:"varint,3,opt,name=duration_seconds,json=durationSeconds,proto3" json:"duration_seconds,omitempty"`
+	// 選曲者名
+	RequesterName string `protobuf:"bytes,4,opt,name=requester_name,json=requesterName,proto3" json:"requester_name,omitempty"`
+	// 選曲者タイプ (user, opening, ending, bgm)
+	RequesterType string `protobuf:"bytes,5,opt,name=requester_type,json=requesterType,proto3" json:"requester_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueueItem) Reset() {
+	*x = QueueItem{}
+	mi := &file_jukebox_v1_listener_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueueItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueueItem) ProtoMessage() {}
+
+func (x *QueueItem) ProtoReflect() protoreflect.Message {
+	mi := &file_jukebox_v1_listener_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueueItem.ProtoReflect.Descriptor instead.
+func (*QueueItem) Descriptor() ([]byte, []int) {
+	return file_jukebox_v1_listener_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *QueueItem) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *QueueItem) GetArtists() []string {
+	if x != nil {
+		return x.Artists
+	}
+	return nil
+}
+
+func (x *QueueItem) GetDurationSeconds() int32 {
+	if x != nil {
+		return x.DurationSeconds
+	}
+	return 0
+}
+
+func (x *QueueItem) GetRequesterName() string {
+	if x != nil {
+		return x.RequesterName
+	}
+	return ""
+}
+
+func (x *QueueItem) GetRequesterType() string {
+	if x != nil {
+		return x.RequesterType
+	}
+	return ""
+}
+
 var File_jukebox_v1_listener_proto protoreflect.FileDescriptor
 
 const file_jukebox_v1_listener_proto_rawDesc = "" +
@@ -809,7 +971,16 @@ const file_jukebox_v1_listener_proto_rawDesc = "" +
 	"\x0erequester_type\x18\t \x01(\tR\rrequesterType\x12+\n" +
 	"\x11remaining_seconds\x18\n" +
 	" \x01(\x05R\x10remainingSeconds\x12,\n" +
-	"\x05state\x18\v \x01(\x0e2\x16.jukebox.v1.TrackStateR\x05state*\xa2\x01\n" +
+	"\x05state\x18\v \x01(\x0e2\x16.jukebox.v1.TrackStateR\x05state\"\x11\n" +
+	"\x0fGetQueueRequest\"?\n" +
+	"\x10GetQueueResponse\x12+\n" +
+	"\x05items\x18\x01 \x03(\v2\x15.jukebox.v1.QueueItemR\x05items\"\xb2\x01\n" +
+	"\tQueueItem\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
+	"\aartists\x18\x02 \x03(\tR\aartists\x12)\n" +
+	"\x10duration_seconds\x18\x03 \x01(\x05R\x0fdurationSeconds\x12%\n" +
+	"\x0erequester_name\x18\x04 \x01(\tR\rrequesterName\x12%\n" +
+	"\x0erequester_type\x18\x05 \x01(\tR\rrequesterType*\xa2\x01\n" +
 	"\x10NotificationType\x12!\n" +
 	"\x1dNOTIFICATION_TYPE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fNOTIFICATION_TYPE_INITIAL_STATE\x10\x01\x12\"\n" +
@@ -829,11 +1000,12 @@ const file_jukebox_v1_listener_proto_rawDesc = "" +
 	"\x14SESSION_STATE_PAUSED\x10\x03\x12$\n" +
 	" SESSION_STATE_WAITING_FOR_TRACKS\x10\x04\x12\x18\n" +
 	"\x14SESSION_STATE_ENDING\x10\x05\x12\x1c\n" +
-	"\x18SESSION_STATE_TERMINATED\x10\x062\x80\x02\n" +
+	"\x18SESSION_STATE_TERMINATED\x10\x062\xc7\x02\n" +
 	"\x0fListenerService\x129\n" +
 	"\x04Join\x12\x17.jukebox.v1.JoinRequest\x1a\x18.jukebox.v1.JoinResponse\x12Q\n" +
 	"\fRequestTrack\x12\x1f.jukebox.v1.RequestTrackRequest\x1a .jukebox.v1.RequestTrackResponse\x12_\n" +
-	"\x16SubscribeNotifications\x12).jukebox.v1.SubscribeNotificationsRequest\x1a\x18.jukebox.v1.Notification0\x01B\xa3\x01\n" +
+	"\x16SubscribeNotifications\x12).jukebox.v1.SubscribeNotificationsRequest\x1a\x18.jukebox.v1.Notification0\x01\x12E\n" +
+	"\bGetQueue\x12\x1b.jukebox.v1.GetQueueRequest\x1a\x1c.jukebox.v1.GetQueueResponseB\xa3\x01\n" +
 	"\x0ecom.jukebox.v1B\rListenerProtoP\x01Z9github.com/osa030/19box/internal/gen/jukebox/v1;jukeboxv1\xa2\x02\x03JXX\xaa\x02\n" +
 	"Jukebox.V1\xca\x02\n" +
 	"Jukebox\\V1\xe2\x02\x16Jukebox\\V1\\GPBMetadata\xea\x02\vJukebox::V1b\x06proto3"
@@ -851,7 +1023,7 @@ func file_jukebox_v1_listener_proto_rawDescGZIP() []byte {
 }
 
 var file_jukebox_v1_listener_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_jukebox_v1_listener_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_jukebox_v1_listener_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_jukebox_v1_listener_proto_goTypes = []any{
 	(NotificationType)(0),                 // 0: jukebox.v1.NotificationType
 	(TrackState)(0),                       // 1: jukebox.v1.TrackState
@@ -864,6 +1036,9 @@ var file_jukebox_v1_listener_proto_goTypes = []any{
 	(*Notification)(nil),                  // 8: jukebox.v1.Notification
 	(*SessionInfo)(nil),                   // 9: jukebox.v1.SessionInfo
 	(*TrackInfo)(nil),                     // 10: jukebox.v1.TrackInfo
+	(*GetQueueRequest)(nil),               // 11: jukebox.v1.GetQueueRequest
+	(*GetQueueResponse)(nil),              // 12: jukebox.v1.GetQueueResponse
+	(*QueueItem)(nil),                     // 13: jukebox.v1.QueueItem
 }
 var file_jukebox_v1_listener_proto_depIdxs = []int32{
 	0,  // 0: jukebox.v1.Notification.type:type_name -> jukebox.v1.NotificationType
@@ -871,17 +1046,20 @@ var file_jukebox_v1_listener_proto_depIdxs = []int32{
 	10, // 2: jukebox.v1.Notification.track_info:type_name -> jukebox.v1.TrackInfo
 	2,  // 3: jukebox.v1.SessionInfo.state:type_name -> jukebox.v1.SessionState
 	1,  // 4: jukebox.v1.TrackInfo.state:type_name -> jukebox.v1.TrackState
-	3,  // 5: jukebox.v1.ListenerService.Join:input_type -> jukebox.v1.JoinRequest
-	5,  // 6: jukebox.v1.ListenerService.RequestTrack:input_type -> jukebox.v1.RequestTrackRequest
-	7,  // 7: jukebox.v1.ListenerService.SubscribeNotifications:input_type -> jukebox.v1.SubscribeNotificationsRequest
-	4,  // 8: jukebox.v1.ListenerService.Join:output_type -> jukebox.v1.JoinResponse
-	6,  // 9: jukebox.v1.ListenerService.RequestTrack:output_type -> jukebox.v1.RequestTrackResponse
-	8,  // 10: jukebox.v1.ListenerService.SubscribeNotifications:output_type -> jukebox.v1.Notification
-	8,  // [8:11] is the sub-list for method output_type
-	5,  // [5:8] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	13, // 5: jukebox.v1.GetQueueResponse.items:type_name -> jukebox.v1.QueueItem
+	3,  // 6: jukebox.v1.ListenerService.Join:input_type -> jukebox.v1.JoinRequest
+	5,  // 7: jukebox.v1.ListenerService.RequestTrack:input_type -> jukebox.v1.RequestTrackRequest
+	7,  // 8: jukebox.v1.ListenerService.SubscribeNotifications:input_type -> jukebox.v1.SubscribeNotificationsRequest
+	11, // 9: jukebox.v1.ListenerService.GetQueue:input_type -> jukebox.v1.GetQueueRequest
+	4,  // 10: jukebox.v1.ListenerService.Join:output_type -> jukebox.v1.JoinResponse
+	6,  // 11: jukebox.v1.ListenerService.RequestTrack:output_type -> jukebox.v1.RequestTrackResponse
+	8,  // 12: jukebox.v1.ListenerService.SubscribeNotifications:output_type -> jukebox.v1.Notification
+	12, // 13: jukebox.v1.ListenerService.GetQueue:output_type -> jukebox.v1.GetQueueResponse
+	10, // [10:14] is the sub-list for method output_type
+	6,  // [6:10] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_jukebox_v1_listener_proto_init() }
@@ -895,7 +1073,7 @@ func file_jukebox_v1_listener_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_jukebox_v1_listener_proto_rawDesc), len(file_jukebox_v1_listener_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   8,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

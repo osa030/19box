@@ -74,6 +74,29 @@ func (s *ListenerService) RequestTrack(
 	}), nil
 }
 
+// GetQueue returns the current queue.
+func (s *ListenerService) GetQueue(
+	ctx context.Context,
+	req *connect.Request[jukeboxv1.GetQueueRequest],
+) (*connect.Response[jukeboxv1.GetQueueResponse], error) {
+	queuedTracks := s.session.GetQueuedTracks()
+
+	items := make([]*jukeboxv1.QueueItem, len(queuedTracks))
+	for i, qt := range queuedTracks {
+		items[i] = &jukeboxv1.QueueItem{
+			Name:            qt.Track.Name,
+			Artists:         qt.Track.Artists,
+			DurationSeconds: int32(qt.Track.Duration.Seconds()),
+			RequesterName:   qt.Requester.Name,
+			RequesterType:   string(qt.Requester.Type),
+		}
+	}
+
+	return connect.NewResponse(&jukeboxv1.GetQueueResponse{
+		Items: items,
+	}), nil
+}
+
 // SubscribeNotifications handles notification subscription requests.
 func (s *ListenerService) SubscribeNotifications(
 	ctx context.Context,

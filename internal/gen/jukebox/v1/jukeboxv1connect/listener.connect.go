@@ -41,6 +41,9 @@ const (
 	// ListenerServiceSubscribeNotificationsProcedure is the fully-qualified name of the
 	// ListenerService's SubscribeNotifications RPC.
 	ListenerServiceSubscribeNotificationsProcedure = "/jukebox.v1.ListenerService/SubscribeNotifications"
+	// ListenerServiceGetQueueProcedure is the fully-qualified name of the ListenerService's GetQueue
+	// RPC.
+	ListenerServiceGetQueueProcedure = "/jukebox.v1.ListenerService/GetQueue"
 )
 
 // ListenerServiceClient is a client for the jukebox.v1.ListenerService service.
@@ -51,6 +54,8 @@ type ListenerServiceClient interface {
 	RequestTrack(context.Context, *connect.Request[v1.RequestTrackRequest]) (*connect.Response[v1.RequestTrackResponse], error)
 	// 通知受信（Server Streaming）
 	SubscribeNotifications(context.Context, *connect.Request[v1.SubscribeNotificationsRequest]) (*connect.ServerStreamForClient[v1.Notification], error)
+	// キュー一覧取得
+	GetQueue(context.Context, *connect.Request[v1.GetQueueRequest]) (*connect.Response[v1.GetQueueResponse], error)
 }
 
 // NewListenerServiceClient constructs a client for the jukebox.v1.ListenerService service. By
@@ -82,6 +87,12 @@ func NewListenerServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(listenerServiceMethods.ByName("SubscribeNotifications")),
 			connect.WithClientOptions(opts...),
 		),
+		getQueue: connect.NewClient[v1.GetQueueRequest, v1.GetQueueResponse](
+			httpClient,
+			baseURL+ListenerServiceGetQueueProcedure,
+			connect.WithSchema(listenerServiceMethods.ByName("GetQueue")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -90,6 +101,7 @@ type listenerServiceClient struct {
 	join                   *connect.Client[v1.JoinRequest, v1.JoinResponse]
 	requestTrack           *connect.Client[v1.RequestTrackRequest, v1.RequestTrackResponse]
 	subscribeNotifications *connect.Client[v1.SubscribeNotificationsRequest, v1.Notification]
+	getQueue               *connect.Client[v1.GetQueueRequest, v1.GetQueueResponse]
 }
 
 // Join calls jukebox.v1.ListenerService.Join.
@@ -107,6 +119,11 @@ func (c *listenerServiceClient) SubscribeNotifications(ctx context.Context, req 
 	return c.subscribeNotifications.CallServerStream(ctx, req)
 }
 
+// GetQueue calls jukebox.v1.ListenerService.GetQueue.
+func (c *listenerServiceClient) GetQueue(ctx context.Context, req *connect.Request[v1.GetQueueRequest]) (*connect.Response[v1.GetQueueResponse], error) {
+	return c.getQueue.CallUnary(ctx, req)
+}
+
 // ListenerServiceHandler is an implementation of the jukebox.v1.ListenerService service.
 type ListenerServiceHandler interface {
 	// セッション参加
@@ -115,6 +132,8 @@ type ListenerServiceHandler interface {
 	RequestTrack(context.Context, *connect.Request[v1.RequestTrackRequest]) (*connect.Response[v1.RequestTrackResponse], error)
 	// 通知受信（Server Streaming）
 	SubscribeNotifications(context.Context, *connect.Request[v1.SubscribeNotificationsRequest], *connect.ServerStream[v1.Notification]) error
+	// キュー一覧取得
+	GetQueue(context.Context, *connect.Request[v1.GetQueueRequest]) (*connect.Response[v1.GetQueueResponse], error)
 }
 
 // NewListenerServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -142,6 +161,12 @@ func NewListenerServiceHandler(svc ListenerServiceHandler, opts ...connect.Handl
 		connect.WithSchema(listenerServiceMethods.ByName("SubscribeNotifications")),
 		connect.WithHandlerOptions(opts...),
 	)
+	listenerServiceGetQueueHandler := connect.NewUnaryHandler(
+		ListenerServiceGetQueueProcedure,
+		svc.GetQueue,
+		connect.WithSchema(listenerServiceMethods.ByName("GetQueue")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/jukebox.v1.ListenerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ListenerServiceJoinProcedure:
@@ -150,6 +175,8 @@ func NewListenerServiceHandler(svc ListenerServiceHandler, opts ...connect.Handl
 			listenerServiceRequestTrackHandler.ServeHTTP(w, r)
 		case ListenerServiceSubscribeNotificationsProcedure:
 			listenerServiceSubscribeNotificationsHandler.ServeHTTP(w, r)
+		case ListenerServiceGetQueueProcedure:
+			listenerServiceGetQueueHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -169,4 +196,8 @@ func (UnimplementedListenerServiceHandler) RequestTrack(context.Context, *connec
 
 func (UnimplementedListenerServiceHandler) SubscribeNotifications(context.Context, *connect.Request[v1.SubscribeNotificationsRequest], *connect.ServerStream[v1.Notification]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("jukebox.v1.ListenerService.SubscribeNotifications is not implemented"))
+}
+
+func (UnimplementedListenerServiceHandler) GetQueue(context.Context, *connect.Request[v1.GetQueueRequest]) (*connect.Response[v1.GetQueueResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("jukebox.v1.ListenerService.GetQueue is not implemented"))
 }

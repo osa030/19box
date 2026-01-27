@@ -13,6 +13,9 @@ service ListenerService {
 
   // 通知受信（Server Streaming）
   rpc SubscribeNotifications(SubscribeNotificationsRequest) returns (stream Notification);
+
+  // キュー一覧取得
+  rpc GetQueue(GetQueueRequest) returns (GetQueueResponse);
 }
 
 message JoinRequest {
@@ -127,4 +130,25 @@ enum SessionState {
   SESSION_STATE_WAITING_FOR_TRACKS = 4;   // キューが空で楽曲待ち（自動再開）
   SESSION_STATE_ENDING = 5;               // 受付終了
   SESSION_STATE_TERMINATED = 6;           // 終了済み
+}
+
+message GetQueueRequest {
+}
+
+message GetQueueResponse {
+  // 再生待ち楽曲一覧
+  repeated QueueItem items = 1;
+}
+
+message QueueItem {
+  // 曲名
+  string name = 1;
+  // アーティスト名
+  repeated string artists = 2;
+  // 再生時間（秒）
+  int32 duration_seconds = 3;
+  // 選曲者名
+  string requester_name = 4;
+  // 選曲者タイプ (user, opening, ending, bgm)
+  string requester_type = 5;
 }
