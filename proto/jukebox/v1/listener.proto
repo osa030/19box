@@ -14,8 +14,8 @@ service ListenerService {
   // 通知受信（Server Streaming）
   rpc SubscribeNotifications(SubscribeNotificationsRequest) returns (stream Notification);
 
-  // キュー一覧取得
-  rpc GetQueue(GetQueueRequest) returns (GetQueueResponse);
+  // セッション状態取得（現在再生中のトラック、キュー、セッション情報）
+  rpc GetSessionInfo(GetSessionInfoRequest) returns (GetSessionInfoResponse);
 }
 
 message JoinRequest {
@@ -132,12 +132,16 @@ enum SessionState {
   SESSION_STATE_TERMINATED = 6;           // 終了済み
 }
 
-message GetQueueRequest {
+message GetSessionInfoRequest {
 }
 
-message GetQueueResponse {
+message GetSessionInfoResponse {
   // 再生待ち楽曲一覧
-  repeated QueueItem items = 1;
+  repeated QueueItem queue = 1;
+  // 現在再生中の楽曲情報
+  TrackInfo current_track = 2;
+  // セッション情報
+  SessionInfo session_info = 3;
 }
 
 message QueueItem {

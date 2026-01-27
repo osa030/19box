@@ -74,16 +74,16 @@ func (s *ListenerService) RequestTrack(
 	}), nil
 }
 
-// GetQueue returns the current queue.
-func (s *ListenerService) GetQueue(
+// GetSessionInfo returns the current session status including queue, current track, and session info.
+func (s *ListenerService) GetSessionInfo(
 	ctx context.Context,
-	req *connect.Request[jukeboxv1.GetQueueRequest],
-) (*connect.Response[jukeboxv1.GetQueueResponse], error) {
+	req *connect.Request[jukeboxv1.GetSessionInfoRequest],
+) (*connect.Response[jukeboxv1.GetSessionInfoResponse], error) {
+	// Get queue
 	queuedTracks := s.session.GetQueuedTracks()
-
-	items := make([]*jukeboxv1.QueueItem, len(queuedTracks))
+	queue := make([]*jukeboxv1.QueueItem, len(queuedTracks))
 	for i, qt := range queuedTracks {
-		items[i] = &jukeboxv1.QueueItem{
+		queue[i] = &jukeboxv1.QueueItem{
 			Name:            qt.Track.Name,
 			Artists:         qt.Track.Artists,
 			DurationSeconds: int32(qt.Track.Duration.Seconds()),
@@ -92,8 +92,13 @@ func (s *ListenerService) GetQueue(
 		}
 	}
 
-	return connect.NewResponse(&jukeboxv1.GetQueueResponse{
-		Items: items,
+	// Get current status (includes current track and session info)
+	status := s.session.GetStatus()
+
+	return connect.NewResponse(&jukeboxv1.GetSessionInfoResponse{
+		Queue:        queue,
+		CurrentTrack: status.TrackInfo,
+		SessionInfo:  status.SessionInfo,
 	}), nil
 }
 

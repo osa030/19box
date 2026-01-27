@@ -759,26 +759,26 @@ func (x *TrackInfo) GetState() TrackState {
 	return TrackState_TRACK_STATE_UNSPECIFIED
 }
 
-type GetQueueRequest struct {
+type GetSessionInfoRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetQueueRequest) Reset() {
-	*x = GetQueueRequest{}
+func (x *GetSessionInfoRequest) Reset() {
+	*x = GetSessionInfoRequest{}
 	mi := &file_jukebox_v1_listener_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetQueueRequest) String() string {
+func (x *GetSessionInfoRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetQueueRequest) ProtoMessage() {}
+func (*GetSessionInfoRequest) ProtoMessage() {}
 
-func (x *GetQueueRequest) ProtoReflect() protoreflect.Message {
+func (x *GetSessionInfoRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_jukebox_v1_listener_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -790,33 +790,37 @@ func (x *GetQueueRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetQueueRequest.ProtoReflect.Descriptor instead.
-func (*GetQueueRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetSessionInfoRequest.ProtoReflect.Descriptor instead.
+func (*GetSessionInfoRequest) Descriptor() ([]byte, []int) {
 	return file_jukebox_v1_listener_proto_rawDescGZIP(), []int{8}
 }
 
-type GetQueueResponse struct {
+type GetSessionInfoResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 再生待ち楽曲一覧
-	Items         []*QueueItem `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Queue []*QueueItem `protobuf:"bytes,1,rep,name=queue,proto3" json:"queue,omitempty"`
+	// 現在再生中の楽曲情報
+	CurrentTrack *TrackInfo `protobuf:"bytes,2,opt,name=current_track,json=currentTrack,proto3" json:"current_track,omitempty"`
+	// セッション情報
+	SessionInfo   *SessionInfo `protobuf:"bytes,3,opt,name=session_info,json=sessionInfo,proto3" json:"session_info,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetQueueResponse) Reset() {
-	*x = GetQueueResponse{}
+func (x *GetSessionInfoResponse) Reset() {
+	*x = GetSessionInfoResponse{}
 	mi := &file_jukebox_v1_listener_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetQueueResponse) String() string {
+func (x *GetSessionInfoResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetQueueResponse) ProtoMessage() {}
+func (*GetSessionInfoResponse) ProtoMessage() {}
 
-func (x *GetQueueResponse) ProtoReflect() protoreflect.Message {
+func (x *GetSessionInfoResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_jukebox_v1_listener_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -828,14 +832,28 @@ func (x *GetQueueResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetQueueResponse.ProtoReflect.Descriptor instead.
-func (*GetQueueResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetSessionInfoResponse.ProtoReflect.Descriptor instead.
+func (*GetSessionInfoResponse) Descriptor() ([]byte, []int) {
 	return file_jukebox_v1_listener_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *GetQueueResponse) GetItems() []*QueueItem {
+func (x *GetSessionInfoResponse) GetQueue() []*QueueItem {
 	if x != nil {
-		return x.Items
+		return x.Queue
+	}
+	return nil
+}
+
+func (x *GetSessionInfoResponse) GetCurrentTrack() *TrackInfo {
+	if x != nil {
+		return x.CurrentTrack
+	}
+	return nil
+}
+
+func (x *GetSessionInfoResponse) GetSessionInfo() *SessionInfo {
+	if x != nil {
+		return x.SessionInfo
 	}
 	return nil
 }
@@ -971,10 +989,12 @@ const file_jukebox_v1_listener_proto_rawDesc = "" +
 	"\x0erequester_type\x18\t \x01(\tR\rrequesterType\x12+\n" +
 	"\x11remaining_seconds\x18\n" +
 	" \x01(\x05R\x10remainingSeconds\x12,\n" +
-	"\x05state\x18\v \x01(\x0e2\x16.jukebox.v1.TrackStateR\x05state\"\x11\n" +
-	"\x0fGetQueueRequest\"?\n" +
-	"\x10GetQueueResponse\x12+\n" +
-	"\x05items\x18\x01 \x03(\v2\x15.jukebox.v1.QueueItemR\x05items\"\xb2\x01\n" +
+	"\x05state\x18\v \x01(\x0e2\x16.jukebox.v1.TrackStateR\x05state\"\x17\n" +
+	"\x15GetSessionInfoRequest\"\xbd\x01\n" +
+	"\x16GetSessionInfoResponse\x12+\n" +
+	"\x05queue\x18\x01 \x03(\v2\x15.jukebox.v1.QueueItemR\x05queue\x12:\n" +
+	"\rcurrent_track\x18\x02 \x01(\v2\x15.jukebox.v1.TrackInfoR\fcurrentTrack\x12:\n" +
+	"\fsession_info\x18\x03 \x01(\v2\x17.jukebox.v1.SessionInfoR\vsessionInfo\"\xb2\x01\n" +
 	"\tQueueItem\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
 	"\aartists\x18\x02 \x03(\tR\aartists\x12)\n" +
@@ -1000,12 +1020,12 @@ const file_jukebox_v1_listener_proto_rawDesc = "" +
 	"\x14SESSION_STATE_PAUSED\x10\x03\x12$\n" +
 	" SESSION_STATE_WAITING_FOR_TRACKS\x10\x04\x12\x18\n" +
 	"\x14SESSION_STATE_ENDING\x10\x05\x12\x1c\n" +
-	"\x18SESSION_STATE_TERMINATED\x10\x062\xc7\x02\n" +
+	"\x18SESSION_STATE_TERMINATED\x10\x062\xd9\x02\n" +
 	"\x0fListenerService\x129\n" +
 	"\x04Join\x12\x17.jukebox.v1.JoinRequest\x1a\x18.jukebox.v1.JoinResponse\x12Q\n" +
 	"\fRequestTrack\x12\x1f.jukebox.v1.RequestTrackRequest\x1a .jukebox.v1.RequestTrackResponse\x12_\n" +
-	"\x16SubscribeNotifications\x12).jukebox.v1.SubscribeNotificationsRequest\x1a\x18.jukebox.v1.Notification0\x01\x12E\n" +
-	"\bGetQueue\x12\x1b.jukebox.v1.GetQueueRequest\x1a\x1c.jukebox.v1.GetQueueResponseB\xa3\x01\n" +
+	"\x16SubscribeNotifications\x12).jukebox.v1.SubscribeNotificationsRequest\x1a\x18.jukebox.v1.Notification0\x01\x12W\n" +
+	"\x0eGetSessionInfo\x12!.jukebox.v1.GetSessionInfoRequest\x1a\".jukebox.v1.GetSessionInfoResponseB\xa3\x01\n" +
 	"\x0ecom.jukebox.v1B\rListenerProtoP\x01Z9github.com/osa030/19box/internal/gen/jukebox/v1;jukeboxv1\xa2\x02\x03JXX\xaa\x02\n" +
 	"Jukebox.V1\xca\x02\n" +
 	"Jukebox\\V1\xe2\x02\x16Jukebox\\V1\\GPBMetadata\xea\x02\vJukebox::V1b\x06proto3"
@@ -1036,8 +1056,8 @@ var file_jukebox_v1_listener_proto_goTypes = []any{
 	(*Notification)(nil),                  // 8: jukebox.v1.Notification
 	(*SessionInfo)(nil),                   // 9: jukebox.v1.SessionInfo
 	(*TrackInfo)(nil),                     // 10: jukebox.v1.TrackInfo
-	(*GetQueueRequest)(nil),               // 11: jukebox.v1.GetQueueRequest
-	(*GetQueueResponse)(nil),              // 12: jukebox.v1.GetQueueResponse
+	(*GetSessionInfoRequest)(nil),         // 11: jukebox.v1.GetSessionInfoRequest
+	(*GetSessionInfoResponse)(nil),        // 12: jukebox.v1.GetSessionInfoResponse
 	(*QueueItem)(nil),                     // 13: jukebox.v1.QueueItem
 }
 var file_jukebox_v1_listener_proto_depIdxs = []int32{
@@ -1046,20 +1066,22 @@ var file_jukebox_v1_listener_proto_depIdxs = []int32{
 	10, // 2: jukebox.v1.Notification.track_info:type_name -> jukebox.v1.TrackInfo
 	2,  // 3: jukebox.v1.SessionInfo.state:type_name -> jukebox.v1.SessionState
 	1,  // 4: jukebox.v1.TrackInfo.state:type_name -> jukebox.v1.TrackState
-	13, // 5: jukebox.v1.GetQueueResponse.items:type_name -> jukebox.v1.QueueItem
-	3,  // 6: jukebox.v1.ListenerService.Join:input_type -> jukebox.v1.JoinRequest
-	5,  // 7: jukebox.v1.ListenerService.RequestTrack:input_type -> jukebox.v1.RequestTrackRequest
-	7,  // 8: jukebox.v1.ListenerService.SubscribeNotifications:input_type -> jukebox.v1.SubscribeNotificationsRequest
-	11, // 9: jukebox.v1.ListenerService.GetQueue:input_type -> jukebox.v1.GetQueueRequest
-	4,  // 10: jukebox.v1.ListenerService.Join:output_type -> jukebox.v1.JoinResponse
-	6,  // 11: jukebox.v1.ListenerService.RequestTrack:output_type -> jukebox.v1.RequestTrackResponse
-	8,  // 12: jukebox.v1.ListenerService.SubscribeNotifications:output_type -> jukebox.v1.Notification
-	12, // 13: jukebox.v1.ListenerService.GetQueue:output_type -> jukebox.v1.GetQueueResponse
-	10, // [10:14] is the sub-list for method output_type
-	6,  // [6:10] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	13, // 5: jukebox.v1.GetSessionInfoResponse.queue:type_name -> jukebox.v1.QueueItem
+	10, // 6: jukebox.v1.GetSessionInfoResponse.current_track:type_name -> jukebox.v1.TrackInfo
+	9,  // 7: jukebox.v1.GetSessionInfoResponse.session_info:type_name -> jukebox.v1.SessionInfo
+	3,  // 8: jukebox.v1.ListenerService.Join:input_type -> jukebox.v1.JoinRequest
+	5,  // 9: jukebox.v1.ListenerService.RequestTrack:input_type -> jukebox.v1.RequestTrackRequest
+	7,  // 10: jukebox.v1.ListenerService.SubscribeNotifications:input_type -> jukebox.v1.SubscribeNotificationsRequest
+	11, // 11: jukebox.v1.ListenerService.GetSessionInfo:input_type -> jukebox.v1.GetSessionInfoRequest
+	4,  // 12: jukebox.v1.ListenerService.Join:output_type -> jukebox.v1.JoinResponse
+	6,  // 13: jukebox.v1.ListenerService.RequestTrack:output_type -> jukebox.v1.RequestTrackResponse
+	8,  // 14: jukebox.v1.ListenerService.SubscribeNotifications:output_type -> jukebox.v1.Notification
+	12, // 15: jukebox.v1.ListenerService.GetSessionInfo:output_type -> jukebox.v1.GetSessionInfoResponse
+	12, // [12:16] is the sub-list for method output_type
+	8,  // [8:12] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_jukebox_v1_listener_proto_init() }

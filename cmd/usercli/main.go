@@ -34,8 +34,8 @@ var (
 	// subscribe command
 	subscribeCmd = app.Command("subscribe", "Subscribe to notifications")
 
-	// queue command
-	queueCmd = app.Command("queue", "Get current queue")
+	// status command
+	statusCmd = app.Command("status", "Get session status (current track, queue, session info)")
 )
 
 func main() {
@@ -61,8 +61,8 @@ func main() {
 		requestTrack(ctx, client, *requestListener, *requestTrackID)
 	case subscribeCmd.FullCommand():
 		subscribe(ctx, client)
-	case queueCmd.FullCommand():
-		getQueue(ctx, client)
+	case statusCmd.FullCommand():
+		getSessionInfo(ctx, client)
 	}
 }
 
@@ -211,33 +211,55 @@ func printNotification(n *jukeboxv1.Notification) {
 	fmt.Println()
 }
 
-func getQueue(ctx context.Context, client jukeboxv1connect.ListenerServiceClient) {
-	resp, err := client.GetQueue(ctx, connect.NewRequest(&jukeboxv1.GetQueueRequest{}))
+func getSessionInfo(ctx context.Context, client jukeboxv1connect.ListenerServiceClient) {
+	resp, err := client.GetSessionInfo(ctx, connect.NewRequest(&jukeboxv1.GetSessionInfoRequest{}))
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	items := resp.Msg.Items
-	if len(items) == 0 {
-		fmt.Println("Queue is empty.")
-		return
+	// Print session info
+	if resp.Msg.SessionInfo != nil {
+		fmt.Println("=== Session Info ===")
+		fmt.Printf("  Playlist: %s\n", resp.Msg.SessionInfo.PlaylistName)
+		fmt.Printf("  URL: %s\n", resp.Msg.SessionInfo.PlaylistUrl)
+		fmt.Printf("  State: %s\n", formatSessionState(resp.Msg.SessionInfo.State))
+		fmt.Printf("  Accepting Requests: %v\n", resp.Msg.SessionInfo.AcceptingRequests)
+		fmt.Println()
 	}
 
-	fmt.Printf("Queue (%d tracks):\n", len(items))
-	fmt.Println("─────────────────────────────────────────────────────────────")
+	// Print current track
+	if resp.Msg.CurrentTrack != nil {
+		fmt.Println("=== Now Playing ===")
+		fmt.Printf("  %s - %s\n", resp.Msg.CurrentTrack.Name, joinArtists(resp.Msg.CurrentTrack.Artists))
+		fmt.Printf("  URL: %s\n", resp.Msg.CurrentTrack.Url)
+		fmt.Printf("  Album Art: %s\n", resp.Msg.CurrentTrack.AlbumArtUrl)
+		fmt.Printf("  Requested by: %s (%s)\n", resp.Msg.CurrentTrack.RequesterName, resp.Msg.CurrentTrack.RequesterType)
+		fmt.Println()
+	} else {
+		fmt.Println("=== Now Playing ===")
+		fmt.Println("  No track playing")
+		fmt.Println()
+	}
 
-	for i, item := range items {
-		duration := formatDuration(item.DurationSeconds)
-		artists := joinArtists(item.Artists)
-		fmt.Printf("%2d. %s - %s [%s] (by %s, %s)\n",
-			i+1,
-			item.Name,
-			artists,
-			duration,
-			item.RequesterName,
-			item.RequesterType,
-		)
+	// Print queue
+	queue := resp.Msg.Queue
+	fmt.Printf("=== Queue (%d tracks) ===\n", len(queue))
+	if len(queue) == 0 {
+		fmt.Println("  (empty)")
+	} else {
+		for i, item := range queue {
+			duration := formatDuration(item.DurationSeconds)
+			artists := joinArtists(item.Artists)
+			fmt.Printf("  %2d. %s - %s [%s] (by %s, %s)\n",
+				i+1,
+				item.Name,
+				artists,
+				duration,
+				item.RequesterName,
+				item.RequesterType,
+			)
+		}
 	}
 }
 
