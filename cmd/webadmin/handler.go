@@ -19,10 +19,11 @@ import (
 
 // Handler handles HTTP requests for the webadmin API.
 type Handler struct {
-	config     *WebAdminConfig
-	baseConfig map[string]interface{}
-	pm         *ProcessManager
-	adminClient jukeboxv1connect.AdminServiceClient
+	config        *WebAdminConfig
+	baseConfig    map[string]interface{}
+	pm            *ProcessManager
+	adminClient   jukeboxv1connect.AdminServiceClient
+	activeFilters []string
 }
 
 // NewHandler creates a new Handler.
@@ -166,6 +167,18 @@ func (h *Handler) handleServerStart(w http.ResponseWriter, r *http.Request) {
 	}
 	finalConfig := MergeFormData(h.baseConfig, formData)
 
+	// Extract active filters from final config
+	h.activeFilters = nil
+	if filtersMap, ok := finalConfig["filters"].(map[string]interface{}); ok {
+		for name, cfg := range filtersMap {
+			if filterCfg, ok := cfg.(map[string]interface{}); ok {
+				if enabled, ok := filterCfg["enabled"].(bool); ok && enabled {
+					h.activeFilters = append(h.activeFilters, name)
+				}
+			}
+		}
+	}
+
 	// Inject Admin Token from webadmin config
 	if h.config.JukeBox.AdminToken != "" {
 		if admin, ok := finalConfig["admin"].(map[string]interface{}); ok {
@@ -262,6 +275,7 @@ func (h *Handler) handleServerStop(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.adminClient = nil
+	h.activeFilters = nil
 
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"success": true,
@@ -336,6 +350,7 @@ func (h *Handler) handleServerStatus(w http.ResponseWriter, r *http.Request) {
 		"listenerCount": resp.Msg.ListenerCount,
 		"sessionInfo":   resp.Msg.SessionInfo,
 		"currentTrack":  resp.Msg.CurrentTrack,
+		"activeFilters": h.activeFilters,
 	})
 }
 

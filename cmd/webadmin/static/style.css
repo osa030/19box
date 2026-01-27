@@ -579,6 +579,24 @@ select.input-full {
     word-break: break-all;
 }
 
+/* Active Filters Tags */
+.filter-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.filter-tag {
+    display: inline-block;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: rgba(29, 185, 84, 0.15);
+    border: 1px solid var(--accent-primary);
+    border-radius: var(--border-radius);
+    color: var(--accent-primary);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
 /* Toast */
 .toast-container {
     position: fixed;

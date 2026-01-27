@@ -247,6 +247,38 @@ function renderHooks(hooks) {
     }
 }
 
+// Filter key to display name mapping
+const FILTER_DISPLAY_NAMES = {
+    'duration_limit_filter': 'Duration Limit Filter',
+    'kicked_listener_filter': 'Kicked Listener Filter',
+    'user_pending_filter': 'User Pending Filter',
+    'duplicate_track_filter': 'Duplicate Track Filter',
+    'duplicate_artist_filter': 'Duplicate Artist Filter',
+    'blacklist_track_filter': 'Blacklist Track Filter',
+    'blacklist_artist_filter': 'Blacklist Artist Filter',
+};
+
+// Render active filters
+function renderActiveFilters(filters) {
+    const container = document.getElementById('activeFiltersDisplay');
+    if (!container) return;
+
+    if (!filters || filters.length === 0) {
+        container.innerHTML = '<div class="empty-state">No filters active</div>';
+        return;
+    }
+
+    // Sort filters for consistent display order
+    const sortedFilters = [...filters].sort();
+
+    const html = sortedFilters.map(key => {
+        const displayName = FILTER_DISPLAY_NAMES[key] || key;
+        return `<div class="filter-tag">${escapeHtml(displayName)}</div>`;
+    }).join('');
+
+    container.innerHTML = `<div class="filter-tags">${html}</div>`;
+}
+
 // Handle preset change
 async function onPresetChange() {
     const presetName = presetSelect.value;
@@ -463,6 +495,9 @@ async function pollStatus() {
             trackRequester.textContent = '-';
             trackRemaining.textContent = '-';
         }
+
+        // Update active filters
+        renderActiveFilters(status.activeFilters);
 
         // Update listeners
         await updateListeners();
