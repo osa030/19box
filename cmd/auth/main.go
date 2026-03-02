@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	spotifyauth "github.com/zmb3/spotify/v2/auth"
 	"golang.org/x/oauth2"
 )
 
@@ -20,9 +19,9 @@ var (
 	clientSecret = app.Flag("client-secret", "Spotify Client Secret").Envar("SPOTIFY_CLIENT_SECRET").Required().String()
 	port         = app.Flag("port", "Callback server port").Default("8888").Int()
 
-	auth  *spotifyauth.Authenticator
-	ch    = make(chan *oauth2.Token)
-	state = "19box-auth-state"
+	oauthCfg *oauth2.Config
+	ch        = make(chan *oauth2.Token)
+	state     = "19box-auth-state"
 )
 
 func main() {
@@ -32,17 +31,21 @@ func main() {
 	// Build redirect URI with custom port
 	customRedirectURI := fmt.Sprintf("http://127.0.0.1:%d/callback", *port)
 
-	// Create authenticator
-	auth = spotifyauth.New(
-		spotifyauth.WithRedirectURL(customRedirectURI),
-		spotifyauth.WithClientID(*clientID),
-		spotifyauth.WithClientSecret(*clientSecret),
-		spotifyauth.WithScopes(
-			spotifyauth.ScopePlaylistModifyPublic,
-			spotifyauth.ScopePlaylistModifyPrivate,
-			spotifyauth.ScopePlaylistReadPrivate,
-		),
-	)
+	// Create OAuth2 config
+	oauthCfg = &oauth2.Config{
+		ClientID:     *clientID,
+		ClientSecret: *clientSecret,
+		RedirectURL:  customRedirectURI,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  "https://accounts.spotify.com/authorize",
+			TokenURL: "https://accounts.spotify.com/api/token",
+		},
+		Scopes: []string{
+			"playlist-modify-public",
+			"playlist-modify-private",
+			"playlist-read-private",
+		},
+	}
 
 	// Start HTTP server for callback
 	http.HandleFunc("/callback", completeAuth)
@@ -57,7 +60,7 @@ func main() {
 	}()
 
 	// Print authorization URL
-	url := auth.AuthURL(state)
+	url := oauthCfg.AuthCodeURL(state)
 	fmt.Println("Please visit the following URL to authorize 19box:")
 	fmt.Println("")
 	fmt.Println(url)
@@ -91,16 +94,24 @@ func main() {
 }
 
 func completeAuth(w http.ResponseWriter, r *http.Request) {
-	token, err := auth.Token(r.Context(), state, r)
-	if err != nil {
-		http.Error(w, "Failed to get token", http.StatusForbidden)
-		log.Printf("Failed to get token: %v", err)
-		return
-	}
-
+	// Verify state before exchanging code
 	if st := r.FormValue("state"); st != state {
 		http.Error(w, "State mismatch", http.StatusForbidden)
 		log.Printf("State mismatch: %s != %s", st, state)
+		return
+	}
+
+	code := r.FormValue("code")
+	if code == "" {
+		http.Error(w, "Missing authorization code", http.StatusBadRequest)
+		log.Println("Missing authorization code in callback")
+		return
+	}
+
+	token, err := oauthCfg.Exchange(r.Context(), code)
+	if err != nil {
+		http.Error(w, "Failed to get token", http.StatusForbidden)
+		log.Printf("Failed to get token: %v", err)
 		return
 	}
 

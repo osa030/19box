@@ -17,6 +17,7 @@ import (
 	zlog "github.com/rs/zerolog/log"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	"golang.org/x/oauth2"
 	"connectrpc.com/connect"
 
 	apiconnect "github.com/osa030/19box/internal/api/connect"
@@ -106,6 +107,11 @@ func run(cfg *config.Config) error {
 
 	// Create Spotify client
 	ctx := context.Background()
+	if *verbose {
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
+			Transport: &spotify.DebugTransport{Output: logger.DebugWriter(zlog.Logger)},
+		})
+	}
 	spotifyClient, err := spotify.New(ctx, spotify.Config{
 		ClientID:     cfg.Spotify.ClientID,
 		ClientSecret: cfg.Spotify.ClientSecret,

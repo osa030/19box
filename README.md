@@ -310,8 +310,6 @@ go test ./...
 ## Acknowledgments
 
 - Built with [Connect](https://connectrpc.com/) for gRPC
-- Spotify integration via [zmb3/spotify](https://github.com/zmb3/spotify)
-
 
 
 

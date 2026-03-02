@@ -89,6 +89,23 @@ func Init(cfg Config) error {
 	return nil
 }
 
+// debugWriter is an io.Writer that emits each Write call as a debug-level log entry.
+type debugWriter struct {
+	logger zerolog.Logger
+}
+
+func (w *debugWriter) Write(p []byte) (int, error) {
+	w.logger.Debug().Msg(strings.TrimRight(string(p), "\n"))
+	return len(p), nil
+}
+
+// DebugWriter returns an io.Writer that emits each Write call as a debug-level log entry.
+// Use this to pass a zerolog.Logger to interfaces that accept io.Writer (e.g. http transports),
+// avoiding the "???" level that occurs when writing directly to zerolog.Logger.
+func DebugWriter(l zerolog.Logger) io.Writer {
+	return &debugWriter{logger: l}
+}
+
 // parseLevel parses the log level string.
 func parseLevel(level string) zerolog.Level {
 	switch strings.ToLower(level) {

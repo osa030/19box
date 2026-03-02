@@ -2,37 +2,48 @@
 package spotify
 
 import (
+	"bytes"
 	"context"
 	cryptoRand "crypto/rand"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
+	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/zmb3/spotify/v2"
-	spotifyauth "github.com/zmb3/spotify/v2/auth"
 	"golang.org/x/oauth2"
 
 	"github.com/osa030/19box/internal/domain/track"
 )
 
+// --- Constants ---
+
+const (
+	spotifyAPIBaseURL      = "https://api.spotify.com/v1/"
+	spotifyTokenURL        = "https://accounts.spotify.com/api/token"
+	spotifyMaxItemsPerBatch = 100
+
+	defaultMarket      = "JP"
+	defaultMaxRetries  = 3
+	defaultRetryDelay  = time.Second
+	defaultSearchLimit = 5
+	maxSearchLimit     = 10
+)
+
 // Client is a Spotify API client.
 type Client struct {
-	client     *spotify.Client
+	httpClient *http.Client
+	baseURL    string
 	market     string
 	maxRetries int
 	retryDelay time.Duration
-}
-
-// Config represents Spotify client configuration.
-type Config struct {
-	ClientID     string
-	ClientSecret string
-	RefreshToken string
-	Market       string
 }
 
 // New creates a new Spotify client.
@@ -41,112 +52,157 @@ func New(ctx context.Context, cfg Config) (*Client, error) {
 		return nil, errors.New("spotify credentials are required")
 	}
 
-	// Create authenticator with required scopes
-	auth := spotifyauth.New(
-		spotifyauth.WithClientID(cfg.ClientID),
-		spotifyauth.WithClientSecret(cfg.ClientSecret),
-		spotifyauth.WithScopes(
-			spotifyauth.ScopePlaylistModifyPublic,
-			spotifyauth.ScopePlaylistModifyPrivate,
-			spotifyauth.ScopePlaylistReadPrivate,
-		),
-	)
-
-	// Create token from refresh token
-	token := &oauth2.Token{
-		RefreshToken: cfg.RefreshToken,
+	oauthCfg := &oauth2.Config{
+		ClientID:     cfg.ClientID,
+		ClientSecret: cfg.ClientSecret,
+		Endpoint: oauth2.Endpoint{
+			TokenURL: spotifyTokenURL,
+		},
 	}
-
-	// Get HTTP client with auto-refresh capability
-	httpClient := auth.Client(ctx, token)
-	client := spotify.New(httpClient)
+	token := &oauth2.Token{RefreshToken: cfg.RefreshToken}
+	httpClient := oauthCfg.Client(ctx, token)
 
 	market := cfg.Market
 	if market == "" {
-		market = "JP"
+		market = defaultMarket
 	}
 
 	return &Client{
-		client:     client,
+		httpClient: httpClient,
+		baseURL:    spotifyAPIBaseURL,
 		market:     market,
-		maxRetries: 3,
-		retryDelay: time.Second,
+		maxRetries: defaultMaxRetries,
+		retryDelay: defaultRetryDelay,
 	}, nil
 }
 
-// GetTrack retrieves track information by ID, URL, or URI.
-func (c *Client) GetTrack(ctx context.Context, trackID string, market ...string) (*track.Track, error) {
-	// Extract track ID from URL/URI if necessary
-	id := extractTrackID(trackID)
-	
-	// Determine market options
-	var opts []spotify.RequestOption
-	if len(market) > 0 && market[0] != "" {
-		opts = append(opts, spotify.Market(market[0]))
+// doRequest executes an HTTP request and decodes the JSON response into result (if non-nil).
+func (c *Client) doRequest(ctx context.Context, method, rawURL string, body io.Reader, result any) error {
+	req, err := http.NewRequestWithContext(ctx, method, rawURL, body)
+	if err != nil {
+		return err
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
 	}
 
-	var result *spotify.FullTrack
-	err := c.retry(func() error {
-		t, err := c.client.GetTrack(ctx, spotify.ID(id), opts...)
-		if err != nil {
-			return err
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		apiErr := &spotifyAPIError{StatusCode: resp.StatusCode}
+		var errBody struct {
+			Error struct {
+				Message string `json:"message"`
+			} `json:"error"`
 		}
-		result = t
-		return nil
+		if decErr := json.NewDecoder(resp.Body).Decode(&errBody); decErr == nil {
+			apiErr.Message = errBody.Error.Message
+		}
+		if apiErr.Message == "" {
+			apiErr.Message = http.StatusText(resp.StatusCode)
+		}
+		if resp.StatusCode == http.StatusTooManyRequests {
+			if ra := resp.Header.Get("Retry-After"); ra != "" {
+				if secs, parseErr := strconv.Atoi(ra); parseErr == nil {
+					apiErr.RetryAfter = time.Duration(secs) * time.Second
+				}
+			}
+		}
+		return apiErr
+	}
+
+	if result != nil && resp.StatusCode != http.StatusNoContent {
+		return json.NewDecoder(resp.Body).Decode(result)
+	}
+	return nil
+}
+
+// GetTrack retrieves track information by ID, URL, or URI.
+// https://developer.spotify.com/documentation/web-api/reference/get-track
+func (c *Client) GetTrack(ctx context.Context, trackID string, market ...string) (*track.Track, error) {
+	id := extractTrackID(trackID)
+	m := c.market
+	if len(market) > 0 && market[0] != "" {
+		m = market[0]
+	}
+
+	params := url.Values{"market": {m}}
+	rawURL := c.baseURL + "tracks/" + url.PathEscape(id) + "?" + params.Encode()
+
+	var result apiTrack
+	err := c.retry(func() error {
+		return c.doRequest(ctx, http.MethodGet, rawURL, nil, &result)
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get track")
 	}
 
-	return c.convertTrack(result), nil
+	return c.convertTrack(&result), nil
 }
 
 // Search searches for tracks on Spotify.
+// https://developer.spotify.com/documentation/web-api/reference/search
 func (c *Client) Search(ctx context.Context, query string, searchType string, limit int) ([]track.Track, error) {
 	if query == "" {
 		return nil, errors.New("search query is required")
 	}
 
 	if limit <= 0 {
-		limit = 20
+		limit = defaultSearchLimit
 	}
-	if limit > 50 {
-		limit = 50
+	if limit > maxSearchLimit {
+		limit = maxSearchLimit
 	}
 
-	var result *spotify.SearchResult
+	if searchType == "" {
+		searchType = "track"
+	}
+
+	params := url.Values{
+		"q":     {query},
+		"type":  {searchType},
+		"limit": {strconv.Itoa(limit)},
+	}
+	rawURL := c.baseURL + "search?" + params.Encode()
+
+	var result apiSearchResult
 	err := c.retry(func() error {
-		// Convert searchType to spotify.SearchType
-		var st spotify.SearchType
-		switch searchType {
-		case "track":
-			st = spotify.SearchTypeTrack
-		case "album":
-			st = spotify.SearchTypeAlbum
-		case "artist":
-			st = spotify.SearchTypeArtist
-		default:
-			st = spotify.SearchTypeTrack
-		}
-
-		r, err := c.client.Search(ctx, query, st, spotify.Limit(limit))
-		if err != nil {
-			return err
-		}
-		result = r
-		return nil
+		return c.doRequest(ctx, http.MethodGet, rawURL, nil, &result)
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to search")
 	}
 
-	// Convert search results to tracks
-	tracks := make([]track.Track, 0, len(result.Tracks.Tracks))
-	for _, t := range result.Tracks.Tracks {
-		tracks = append(tracks, *c.convertTrack(&t))
+	tracks := make([]track.Track, 0, len(result.Tracks.Items))
+	for i := range result.Tracks.Items {
+		tracks = append(tracks, *c.convertTrack(&result.Tracks.Items[i]))
 	}
 
 	return tracks, nil
+}
+
+// getPlaylistItemPage fetches a single page of playlist items.
+// https://developer.spotify.com/documentation/web-api/reference/get-playlists-items
+func (c *Client) getPlaylistItemPage(ctx context.Context, playlistID string, limit, offset int) (*apiPlaylistItemPage, error) {
+	params := url.Values{
+		"limit":  {strconv.Itoa(limit)},
+		"offset": {strconv.Itoa(offset)},
+		"market": {c.market},
+	}
+	rawURL := c.baseURL + "playlists/" + url.PathEscape(playlistID) + "/items?" + params.Encode()
+
+	var page apiPlaylistItemPage
+	err := c.retry(func() error {
+		return c.doRequest(ctx, http.MethodGet, rawURL, nil, &page)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &page, nil
 }
 
 // GetPlaylistTracks retrieves all tracks from a playlist.
@@ -158,31 +214,18 @@ func (c *Client) GetPlaylistTracks(ctx context.Context, playlistURL string) ([]t
 
 	var tracks []track.Track
 	offset := 0
-	limit := 100
+	limit := spotifyMaxItemsPerBatch
 
 	for {
-		var page *spotify.PlaylistItemPage
-		err := c.retry(func() error {
-			p, err := c.client.GetPlaylistItems(ctx, spotify.ID(playlistID),
-				spotify.Limit(limit),
-				spotify.Offset(offset),
-				spotify.Market(c.market),
-			)
-			if err != nil {
-				return err
-			}
-			page = p
-			return nil
-		})
+		page, err := c.getPlaylistItemPage(ctx, playlistID, limit, offset)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get playlist items")
 		}
 
-		for _, item := range page.Items {
-			// Only process tracks (exclude episodes)
-			// item.Track is a struct, check if Track field exists and is not nil
-			if item.Track.Track != nil && item.Track.Track.ID != "" {
-				tracks = append(tracks, *c.convertTrack(item.Track.Track))
+		for i := range page.Items {
+			item := &page.Items[i]
+			if item.Track != nil && item.Track.Type == "track" && item.Track.ID != "" {
+				tracks = append(tracks, *c.convertTrack(&item.Track.apiTrack))
 			}
 		}
 
@@ -203,19 +246,10 @@ func (c *Client) CheckPlaylistExists(ctx context.Context, playlistURL string) er
 		return errors.New("invalid playlist URL")
 	}
 
-	// Fetch only 1 item to check existence
-	err := c.retry(func() error {
-		_, err := c.client.GetPlaylistItems(ctx, spotify.ID(playlistID),
-			spotify.Limit(1),
-			spotify.Offset(0),
-			spotify.Market(c.market),
-		)
-		return err
-	})
+	_, err := c.getPlaylistItemPage(ctx, playlistID, 1, 0)
 	if err != nil {
 		return errors.Wrap(err, "playlist does not exist or is not accessible")
 	}
-
 	return nil
 }
 
@@ -227,39 +261,25 @@ func (c *Client) GetPlaylistTracksRandom(ctx context.Context, playlistURL string
 		return nil, errors.New("invalid playlist URL")
 	}
 
-	// First, get the total track count by fetching the first page
-	var firstPage *spotify.PlaylistItemPage
-	err := c.retry(func() error {
-		p, err := c.client.GetPlaylistItems(ctx, spotify.ID(playlistID),
-			spotify.Limit(1),
-			spotify.Offset(0),
-			spotify.Market(c.market),
-		)
-		if err != nil {
-			return err
-		}
-		firstPage = p
-		return nil
-	})
+	// Get total track count by fetching the first page
+	firstPage, err := c.getPlaylistItemPage(ctx, playlistID, 1, 0)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get playlist info")
 	}
 
-	totalTracks := int(firstPage.Total)
+	totalTracks := firstPage.Total
 	if totalTracks == 0 {
 		return []track.Track{}, nil
 	}
 
-	// Calculate random offset with better entropy
-	// We want to fetch a page that contains enough tracks, so we limit the offset
-	// to ensure we can get at least 'count' tracks from the page
-	limit := 100 // Spotify API max per page
+	// Calculate random offset, ensuring we can get at least 'count' tracks from the page
+	limit := spotifyMaxItemsPerBatch
 	maxOffset := totalTracks - limit
 	if maxOffset < 0 {
 		maxOffset = 0
 	}
 
-	// Use crypto/rand for better randomness combined with time-based seed
+	// Use crypto/rand for better randomness combined with time-based fallback
 	var cryptoSeed int64
 	var buf [8]byte
 	if _, err := cryptoRand.Read(buf[:]); err == nil {
@@ -274,36 +294,21 @@ func (c *Client) GetPlaylistTracksRandom(ctx context.Context, playlistURL string
 		offset = rng.Intn(maxOffset + 1)
 	}
 
-	// Fetch a random page
-	var page *spotify.PlaylistItemPage
-	err = c.retry(func() error {
-		p, err := c.client.GetPlaylistItems(ctx, spotify.ID(playlistID),
-			spotify.Limit(limit),
-			spotify.Offset(offset),
-			spotify.Market(c.market),
-		)
-		if err != nil {
-			return err
-		}
-		page = p
-		return nil
-	})
+	page, err := c.getPlaylistItemPage(ctx, playlistID, limit, offset)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get playlist items")
 	}
 
-	// Convert items to tracks
 	var tracks []track.Track
-	for _, item := range page.Items {
-		// Only process tracks (exclude episodes)
-		if item.Track.Track != nil && item.Track.Track.ID != "" {
-			tracks = append(tracks, *c.convertTrack(item.Track.Track))
+	for i := range page.Items {
+		item := &page.Items[i]
+		if item.Track != nil && item.Track.Type == "track" && item.Track.ID != "" {
+			tracks = append(tracks, *c.convertTrack(&item.Track.apiTrack))
 		}
 	}
 
 	// Randomly select up to 'count' tracks with better shuffle
 	if len(tracks) > count {
-		// Shuffle multiple times for better randomness
 		for i := 0; i < 3; i++ {
 			rng.Shuffle(len(tracks), func(i, j int) {
 				tracks[i], tracks[j] = tracks[j], tracks[i]
@@ -315,49 +320,56 @@ func (c *Client) GetPlaylistTracksRandom(ctx context.Context, playlistURL string
 	return tracks, nil
 }
 
-// CreatePlaylist creates a new playlist.
+// CreatePlaylist creates a new playlist using /me/playlists.
+// https://developer.spotify.com/documentation/web-api/reference/create-playlist
 func (c *Client) CreatePlaylist(ctx context.Context, name, description string) (string, error) {
-	user, err := c.client.CurrentUser(ctx)
+	rawURL := c.baseURL + "me/playlists"
+	body, err := json.Marshal(map[string]any{
+		"name":        name,
+		"description": description,
+		"public":      true,
+	})
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get current user")
+		return "", errors.Wrap(err, "failed to encode playlist request")
 	}
 
-	var playlist *spotify.FullPlaylist
+	var playlist apiPlaylist
 	err = c.retry(func() error {
-		p, err := c.client.CreatePlaylistForUser(ctx, user.ID, name, description, true, false)
-		if err != nil {
-			return err
-		}
-		playlist = p
-		return nil
+		return c.doRequest(ctx, http.MethodPost, rawURL, bytes.NewReader(body), &playlist)
 	})
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create playlist")
 	}
 
-	return string(playlist.ID), nil
+	return playlist.ID, nil
 }
 
 // AddTracksToPlaylist adds tracks to a playlist.
 // trackIDs can be Spotify IDs, URLs, or URIs.
+// hhttps://developer.spotify.com/documentation/web-api/reference/add-items-to-playlist
 func (c *Client) AddTracksToPlaylist(ctx context.Context, playlistID string, trackIDs []string) error {
-	// Extract track IDs from URLs/URIs
-	ids := make([]spotify.ID, len(trackIDs))
-	for i, trackID := range trackIDs {
-		ids[i] = spotify.ID(extractTrackID(trackID))
+	uris := make([]string, len(trackIDs))
+	for i, id := range trackIDs {
+		uris[i] = "spotify:track:" + extractTrackID(id)
 	}
 
-	// Spotify allows max 100 tracks per request
-	for i := 0; i < len(ids); i += 100 {
-		end := i + 100
-		if end > len(ids) {
-			end = len(ids)
-		}
-		batch := ids[i:end]
+	rawURL := c.baseURL + "playlists/" + url.PathEscape(playlistID) + "/items"
 
-		err := c.retry(func() error {
-			_, err := c.client.AddTracksToPlaylist(ctx, spotify.ID(playlistID), batch...)
-			return err
+	// Spotify allows max 100 tracks per request
+	for i := 0; i < len(uris); i += spotifyMaxItemsPerBatch {
+		end := i + spotifyMaxItemsPerBatch
+		if end > len(uris) {
+			end = len(uris)
+		}
+		batch := uris[i:end]
+
+		body, err := json.Marshal(map[string]any{"uris": batch})
+		if err != nil {
+			return errors.Wrap(err, "failed to encode request")
+		}
+
+		err = c.retry(func() error {
+			return c.doRequest(ctx, http.MethodPost, rawURL, bytes.NewReader(body), nil)
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to add tracks to playlist")
@@ -368,23 +380,33 @@ func (c *Client) AddTracksToPlaylist(ctx context.Context, playlistID string, tra
 }
 
 // RemoveTracksFromPlaylist removes tracks from a playlist.
+// https://developer.spotify.com/documentation/web-api/reference/remove-items-playlist
 func (c *Client) RemoveTracksFromPlaylist(ctx context.Context, playlistID string, trackIDs []string) error {
-	ids := make([]spotify.ID, len(trackIDs))
-	for i, id := range trackIDs {
-		ids[i] = spotify.ID(id)
-	}
+	rawURL := c.baseURL + "playlists/" + url.PathEscape(playlistID) + "/items"
 
 	// Spotify allows max 100 tracks per request
-	for i := 0; i < len(ids); i += 100 {
-		end := i + 100
-		if end > len(ids) {
-			end = len(ids)
+	for i := 0; i < len(trackIDs); i += spotifyMaxItemsPerBatch {
+		end := i + spotifyMaxItemsPerBatch
+		if end > len(trackIDs) {
+			end = len(trackIDs)
 		}
-		batch := ids[i:end]
+		batch := trackIDs[i:end]
 
-		err := c.retry(func() error {
-			_, err := c.client.RemoveTracksFromPlaylist(ctx, spotify.ID(playlistID), batch...)
-			return err
+		type itemURI struct {
+			URI string `json:"uri"`
+		}
+		items := make([]itemURI, len(batch))
+		for j, id := range batch {
+			items[j] = itemURI{URI: "spotify:track:" + id}
+		}
+
+		body, err := json.Marshal(map[string]any{"items": items})
+		if err != nil {
+			return errors.Wrap(err, "failed to encode request")
+		}
+
+		err = c.retry(func() error {
+			return c.doRequest(ctx, http.MethodDelete, rawURL, bytes.NewReader(body), nil)
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to remove tracks from playlist")
@@ -399,13 +421,13 @@ func (c *Client) GetPlaylistURL(playlistID string) string {
 	return fmt.Sprintf("https://open.spotify.com/playlist/%s", playlistID)
 }
 
-// convertTrack converts a Spotify FullTrack to domain Track.
-func (c *Client) convertTrack(t *spotify.FullTrack) *track.Track {
+// convertTrack converts an internal API track to a domain Track.
+func (c *Client) convertTrack(t *apiTrack) *track.Track {
 	artists := make([]string, len(t.Artists))
 	artistIDs := make([]string, len(t.Artists))
 	for i, a := range t.Artists {
 		artists[i] = a.Name
-		artistIDs[i] = string(a.ID)
+		artistIDs[i] = a.ID
 	}
 
 	var albumArt string
@@ -414,9 +436,7 @@ func (c *Client) convertTrack(t *spotify.FullTrack) *track.Track {
 	}
 
 	markets := make([]string, len(t.AvailableMarkets))
-	for i, m := range t.AvailableMarkets {
-		markets[i] = string(m)
-	}
+	copy(markets, t.AvailableMarkets)
 
 	// If no markets are returned but we have a configured market,
 	// assume availability in that market (common when using Market param in API calls)
@@ -424,32 +444,19 @@ func (c *Client) convertTrack(t *spotify.FullTrack) *track.Track {
 		markets = append(markets, c.market)
 	}
 
-	// Copy IsPlayable if present
-	// Note: zmb3/spotify struct field is boolean, not pointer, but Spotify API doc says it may be omitted.
-	// We'll treat the library's bool value as truth.
-	// Check if the library exposes it as a pointer or value. Searching confirmed it exists.
-	// Assuming it's a pointer or we take the value.
-	// Let's check `zmb3/spotify` FullTrack definition via reflection or source if possible, but earlier search said "IsPlayable field".
-	// Usually libraries use pointers for nullable fields or omit them.
-	// We'll trust "IsPlayable" exists.
-	var isPlayable *bool
-	if t.IsPlayable != nil {
-		isPlayable = t.IsPlayable
-	}
-
 	return &track.Track{
-		ID:          string(t.ID),
+		ID:          t.ID,
 		Name:        t.Name,
 		Artists:     artists,
 		ArtistIDs:   artistIDs,
 		Album:       t.Album.Name,
 		AlbumArtURL: albumArt,
-		Duration:    time.Duration(t.Duration) * time.Millisecond,
-		URL:         c.GetTrackURL(string(t.ID)),
-		Popularity:  int(t.Popularity),
+		Duration:    time.Duration(t.DurationMs) * time.Millisecond,
+		URL:         c.GetTrackURL(t.ID),
+		Popularity:  t.Popularity,
 		Explicit:    t.Explicit,
 		Markets:     markets,
-		IsPlayable:  isPlayable,
+		IsPlayable:  t.IsPlayable,
 	}
 }
 
@@ -466,7 +473,7 @@ func (c *Client) GetTrackURLWithContext(trackID, playlistID string) string {
 	return fmt.Sprintf("https://open.spotify.com/track/%s?context=spotify%%3Aplaylist%%3A%s", trackID, playlistID)
 }
 
-// retry retries an operation with exponential backoff.
+// retry retries an operation with backoff, honoring Retry-After headers on 429.
 func (c *Client) retry(fn func() error) error {
 	var lastErr error
 	for i := 0; i < c.maxRetries; i++ {
@@ -480,40 +487,34 @@ func (c *Client) retry(fn func() error) error {
 			return err
 		}
 
+		delay := c.retryDelay * time.Duration(i+1)
+		var apiErr *spotifyAPIError
+		if errors.As(err, &apiErr) && apiErr.RetryAfter > 0 {
+			delay = apiErr.RetryAfter
+		}
+
 		if i < c.maxRetries-1 {
-			time.Sleep(c.retryDelay * time.Duration(i+1))
+			time.Sleep(delay)
 		}
 	}
 	return errors.Wrap(lastErr, "max retries exceeded")
 }
 
-// isRetryable checks if an error is retryable.
+// isRetryable checks if an error should trigger a retry.
 func isRetryable(err error) bool {
 	if err == nil {
 		return false
 	}
-	// Rate limit errors, server errors, and network errors are retryable
-	errStr := err.Error()
-
-	// Check for net.Error
+	var apiErr *spotifyAPIError
+	if errors.As(err, &apiErr) {
+		return apiErr.StatusCode == http.StatusTooManyRequests ||
+			(apiErr.StatusCode >= 500 && apiErr.StatusCode < 600)
+	}
 	var netErr net.Error
 	if errors.As(err, &netErr) {
-		if netErr.Timeout() || netErr.Temporary() {
-			return true
-		}
+		return netErr.Timeout()
 	}
-
-	return strings.Contains(errStr, "rate limit") ||
-		strings.Contains(errStr, "429") ||
-		strings.Contains(errStr, "500") ||
-		strings.Contains(errStr, "502") ||
-		strings.Contains(errStr, "503") ||
-		strings.Contains(errStr, "504") ||
-		strings.Contains(errStr, "connection refused") ||
-		strings.Contains(errStr, "connection reset") ||
-		strings.Contains(errStr, "network is unreachable") ||
-		strings.Contains(errStr, "dial tcp") ||
-		strings.Contains(errStr, "software caused connection abort")
+	return false
 }
 
 // extractPlaylistID extracts the playlist ID from a Spotify playlist URL or URI.

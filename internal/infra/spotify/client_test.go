@@ -1,7 +1,6 @@
 package spotify
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -71,48 +70,48 @@ func TestIsRetryable(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:     "rate limit error with 429",
-			err:      errors.New("Error 429: rate limit exceeded"),
-			expected: true,
-		},
-		{
-			name:     "rate limit text",
-			err:      errors.New("rate limit exceeded"),
+			name:     "rate limit 429",
+			err:      &spotifyAPIError{StatusCode: 429, Message: "rate limit exceeded"},
 			expected: true,
 		},
 		{
 			name:     "server error 500",
-			err:      errors.New("Error 500: internal server error"),
+			err:      &spotifyAPIError{StatusCode: 500, Message: "internal server error"},
 			expected: true,
 		},
 		{
 			name:     "server error 502",
-			err:      errors.New("502 Bad Gateway"),
+			err:      &spotifyAPIError{StatusCode: 502, Message: "bad gateway"},
 			expected: true,
 		},
 		{
 			name:     "server error 503",
-			err:      errors.New("503 Service Unavailable"),
+			err:      &spotifyAPIError{StatusCode: 503, Message: "service unavailable"},
 			expected: true,
 		},
 		{
 			name:     "server error 504",
-			err:      errors.New("504 Gateway Timeout"),
+			err:      &spotifyAPIError{StatusCode: 504, Message: "gateway timeout"},
 			expected: true,
 		},
 		{
 			name:     "client error 400",
-			err:      errors.New("400 Bad Request"),
+			err:      &spotifyAPIError{StatusCode: 400, Message: "bad request"},
 			expected: false,
 		},
 		{
-			name:     "not found error",
-			err:      errors.New("404 not found"),
+			name:     "not found 404",
+			err:      &spotifyAPIError{StatusCode: 404, Message: "not found"},
 			expected: false,
 		},
 		{
-			name:     "generic error",
-			err:      errors.New("something went wrong"),
+			name:     "unauthorized 401",
+			err:      &spotifyAPIError{StatusCode: 401, Message: "unauthorized"},
+			expected: false,
+		},
+		{
+			name:     "generic non-api error",
+			err:      assert.AnError,
 			expected: false,
 		},
 	}
