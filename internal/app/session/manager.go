@@ -296,6 +296,7 @@ func (m *Manager) Start(ctx context.Context) error {
 			endingDuration += t.Duration
 		}
 		m.stateMgr.SetEndingDuration(endingDuration)
+		m.playback.SetEndingTracks(tracks)
 	}
 
 	m.mu.Unlock()

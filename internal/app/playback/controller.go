@@ -59,6 +59,9 @@ type Controller struct {
 
 	// Depletion tracking
 	depletionNotified bool
+
+	// Ending playlist tracks (for filter)
+	endingTracks []track.Track
 }
 
 // NewController creates a new playback controller.
@@ -466,6 +469,24 @@ func (c *Controller) GetAllTracks() []track.QueuedTrack {
 		result = append(result, *c.currentTrack)
 	}
 	result = append(result, c.queue...)
+	return result
+}
+
+// SetEndingTracks stores ending playlist tracks for filter checks.
+func (c *Controller) SetEndingTracks(tracks []track.Track) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.endingTracks = tracks
+}
+
+// GetEndingTracks returns ending playlist tracks.
+// Implements filter.QueueManager interface.
+func (c *Controller) GetEndingTracks() []track.Track {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	result := make([]track.Track, len(c.endingTracks))
+	copy(result, c.endingTracks)
 	return result
 }
 

@@ -156,6 +156,8 @@ messages:
     track_not_found: "指定された楽曲が見つかりませんでした"
     invalid_listener: "無効なリスナーIDです"
     duration_limit_exceeded: "この楽曲は長すぎるか短すぎるためリクエストできません"
+    reserved_artist: "このアーティストの楽曲は予約選曲されています"
+    reserved_track: "この楽曲は予約選曲されています"
 
 
 spotify:

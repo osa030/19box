@@ -240,3 +240,79 @@ func TestDuplicateArtistFilter_AppliesTo(t *testing.T) {
 	assert.False(t, filter.AppliesTo(track.RequesterTypeOpening), "Should not apply to opening")
 	assert.False(t, filter.AppliesTo(track.RequesterTypeEnding), "Should not apply to ending")
 }
+
+func TestDuplicateArtistFilter_EndingPlaylist(t *testing.T) {
+	tests := []struct {
+		name           string
+		endingTracks   []track.Track
+		requestedTrack track.Track
+		shouldReject   bool
+		expectedCode   string
+	}{
+		{
+			name: "Artist in ending playlist",
+			endingTracks: []track.Track{
+				{ID: "ending1", Name: "Final Song", Artists: []string{"Queen"}},
+			},
+			requestedTrack: track.Track{ID: "req1", Name: "Other Song", Artists: []string{"Queen"}},
+			shouldReject:   true,
+			expectedCode:   "reserved_artist",
+		},
+		{
+			name: "Artist not in ending playlist",
+			endingTracks: []track.Track{
+				{ID: "ending1", Name: "Final Song", Artists: []string{"Queen"}},
+			},
+			requestedTrack: track.Track{ID: "req1", Name: "Yesterday", Artists: []string{"The Beatles"}},
+			shouldReject:   false,
+		},
+		{
+			name: "Featured artist in ending playlist",
+			endingTracks: []track.Track{
+				{ID: "ending1", Name: "Final Song", Artists: []string{"Queen", "David Bowie"}},
+			},
+			requestedTrack: track.Track{ID: "req1", Name: "Other Song", Artists: []string{"David Bowie"}},
+			shouldReject:   true,
+			expectedCode:   "reserved_artist",
+		},
+		{
+			name: "Case insensitive match",
+			endingTracks: []track.Track{
+				{ID: "ending1", Name: "Final Song", Artists: []string{"Queen"}},
+			},
+			requestedTrack: track.Track{ID: "req1", Name: "Other Song", Artists: []string{"QUEEN"}},
+			shouldReject:   true,
+			expectedCode:   "reserved_artist",
+		},
+		{
+			name:           "Empty ending playlist",
+			endingTracks:   []track.Track{},
+			requestedTrack: track.Track{ID: "req1", Name: "Any Song", Artists: []string{"Any Artist"}},
+			shouldReject:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			qm := &mockQueueManager{
+				tracks:       []track.QueuedTrack{},
+				endingTracks: tt.endingTracks,
+			}
+
+			filter := NewDuplicateArtistFilter(qm)
+			result := filter.Check(
+				context.Background(),
+				TrackRequest{},
+				tt.requestedTrack,
+				&listener.Session{},
+			)
+
+			if tt.shouldReject {
+				assert.False(t, result.Accepted, tt.name)
+				assert.Equal(t, tt.expectedCode, result.Code)
+			} else {
+				assert.True(t, result.Accepted, tt.name)
+			}
+		})
+	}
+}

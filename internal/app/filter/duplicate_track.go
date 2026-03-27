@@ -22,6 +22,7 @@ type DuplicateTrackFilter struct {
 // QueueManager interface for accessing queue data.
 type QueueManager interface {
 	GetAllTracks() []track.QueuedTrack
+	GetEndingTracks() []track.Track
 }
 
 // NewDuplicateTrackFilter creates a new duplicate track filter.
@@ -43,7 +44,7 @@ func (f *DuplicateTrackFilter) Description() string {
 
 // ReturnCodes returns possible return codes.
 func (f *DuplicateTrackFilter) ReturnCodes() []string {
-	return []string{"duplicate_track"}
+	return []string{"duplicate_track", "reserved_track"}
 }
 
 // AppliesTo returns which requester types this filter applies to.
@@ -81,6 +82,23 @@ func (f *DuplicateTrackFilter) Check(
 			return Result{
 				Accepted: false,
 				Code:     "duplicate_track",
+			}
+		}
+	}
+
+	// 3. Check against ending playlist tracks
+	for _, ending := range f.queueManager.GetEndingTracks() {
+		if ending.ID == requestedTrack.ID {
+			return Result{
+				Accepted: false,
+				Code:     "reserved_track",
+			}
+		}
+
+		if f.isRemaster(ending, requestedTrack) {
+			return Result{
+				Accepted: false,
+				Code:     "reserved_track",
 			}
 		}
 	}

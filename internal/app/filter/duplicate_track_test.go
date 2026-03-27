@@ -13,11 +13,16 @@ import (
 
 // Mock QueueManager for testing
 type mockQueueManager struct {
-	tracks []track.QueuedTrack
+	tracks       []track.QueuedTrack
+	endingTracks []track.Track
 }
 
 func (m *mockQueueManager) GetAllTracks() []track.QueuedTrack {
 	return m.tracks
+}
+
+func (m *mockQueueManager) GetEndingTracks() []track.Track {
+	return m.endingTracks
 }
 
 func TestDuplicateTrackFilter_ExactIDMatch(t *testing.T) {
@@ -241,6 +246,81 @@ func TestDuplicateTrackFilter_AppliesTo(t *testing.T) {
 	assert.False(t, filter.AppliesTo(track.RequesterTypeBGM), "Should not apply to BGM")
 	assert.False(t, filter.AppliesTo(track.RequesterTypeOpening), "Should not apply to opening")
 	assert.False(t, filter.AppliesTo(track.RequesterTypeEnding), "Should not apply to ending")
+}
+
+func TestDuplicateTrackFilter_EndingPlaylist(t *testing.T) {
+	tests := []struct {
+		name           string
+		endingTracks   []track.Track
+		requestedTrack track.Track
+		shouldReject   bool
+		expectedCode   string
+	}{
+		{
+			name: "Exact ID match with ending playlist",
+			endingTracks: []track.Track{
+				{ID: "ending1", Name: "Final Song", Artists: []string{"Artist A"}},
+			},
+			requestedTrack: track.Track{ID: "ending1", Name: "Final Song", Artists: []string{"Artist A"}},
+			shouldReject:   true,
+			expectedCode:   "reserved_track",
+		},
+		{
+			name: "Remaster of ending playlist track",
+			endingTracks: []track.Track{
+				{ID: "ending1", Name: "Final Song", Artists: []string{"Artist A"}},
+			},
+			requestedTrack: track.Track{ID: "remaster1", Name: "Final Song - 2023 Remaster", Artists: []string{"Artist A"}},
+			shouldReject:   true,
+			expectedCode:   "reserved_track",
+		},
+		{
+			name: "Cover of ending playlist track (different artist)",
+			endingTracks: []track.Track{
+				{ID: "ending1", Name: "Final Song", Artists: []string{"Artist A"}},
+			},
+			requestedTrack: track.Track{ID: "cover1", Name: "Final Song", Artists: []string{"Artist B"}},
+			shouldReject:   false,
+		},
+		{
+			name: "Different track not in ending playlist",
+			endingTracks: []track.Track{
+				{ID: "ending1", Name: "Final Song", Artists: []string{"Artist A"}},
+			},
+			requestedTrack: track.Track{ID: "other1", Name: "Other Song", Artists: []string{"Artist C"}},
+			shouldReject:   false,
+		},
+		{
+			name:           "Empty ending playlist",
+			endingTracks:   []track.Track{},
+			requestedTrack: track.Track{ID: "any1", Name: "Any Song", Artists: []string{"Any Artist"}},
+			shouldReject:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			qm := &mockQueueManager{
+				tracks:       []track.QueuedTrack{},
+				endingTracks: tt.endingTracks,
+			}
+
+			filter := NewDuplicateTrackFilter(qm)
+			result := filter.Check(
+				context.Background(),
+				TrackRequest{},
+				tt.requestedTrack,
+				&listener.Session{},
+			)
+
+			if tt.shouldReject {
+				assert.False(t, result.Accepted, tt.name)
+				assert.Equal(t, tt.expectedCode, result.Code)
+			} else {
+				assert.True(t, result.Accepted, tt.name)
+			}
+		})
+	}
 }
 
 func TestNormalizeTrackName(t *testing.T) {

@@ -34,7 +34,7 @@ func (f *DuplicateArtistFilter) Description() string {
 
 // ReturnCodes returns possible return codes.
 func (f *DuplicateArtistFilter) ReturnCodes() []string {
-	return []string{"duplicate_artist"}
+	return []string{"duplicate_artist", "reserved_artist"}
 }
 
 // AppliesTo returns which requester types this filter applies to.
@@ -68,6 +68,20 @@ func (f *DuplicateArtistFilter) Check(
 	for _, artist := range requestedTrack.Artists {
 		if _, exists := queuedArtists[strings.ToLower(artist)]; exists {
 			return Reject("duplicate_artist")
+		}
+	}
+
+	// Check against ending playlist artists
+	endingArtists := make(map[string]struct{})
+	for _, ending := range f.queueManager.GetEndingTracks() {
+		for _, artist := range ending.Artists {
+			endingArtists[strings.ToLower(artist)] = struct{}{}
+		}
+	}
+
+	for _, artist := range requestedTrack.Artists {
+		if _, exists := endingArtists[strings.ToLower(artist)]; exists {
+			return Reject("reserved_artist")
 		}
 	}
 
