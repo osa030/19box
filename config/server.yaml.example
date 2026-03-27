@@ -158,6 +158,7 @@ messages:
     duration_limit_exceeded: "この楽曲は長すぎるか短すぎるためリクエストできません"
     reserved_artist: "このアーティストの楽曲は予約選曲されています"
     reserved_track: "この楽曲は予約選曲されています"
+    not_started: "選曲受付はまだ開始されていません"
 
 
 spotify:

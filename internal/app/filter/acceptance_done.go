@@ -11,6 +11,7 @@ import (
 // AcceptanceDoneFilter checks if the session is still accepting requests.
 type AcceptanceDoneFilter struct {
 	isAccepting      func() bool
+	isStarted        func() bool
 	getEndTime       func() *time.Time
 	getEndingDur     func() time.Duration
 	getQueueDuration func() time.Duration
@@ -21,6 +22,7 @@ type AcceptanceDoneFilter struct {
 // NewAcceptanceDoneFilter creates a new AcceptanceDoneFilter.
 func NewAcceptanceDoneFilter(
 	isAccepting func() bool,
+	isStarted func() bool,
 	getEndTime func() *time.Time,
 	getEndingDur func() time.Duration,
 	getQueueDuration func() time.Duration,
@@ -29,6 +31,7 @@ func NewAcceptanceDoneFilter(
 ) *AcceptanceDoneFilter {
 	return &AcceptanceDoneFilter{
 		isAccepting:      isAccepting,
+		isStarted:        isStarted,
 		getEndTime:       getEndTime,
 		getEndingDur:     getEndingDur,
 		getQueueDuration: getQueueDuration,
@@ -46,7 +49,7 @@ func (f *AcceptanceDoneFilter) Description() string {
 }
 
 func (f *AcceptanceDoneFilter) ReturnCodes() []string {
-	return []string{"acceptance_done"}
+	return []string{"acceptance_done", "not_started"}
 }
 
 func (f *AcceptanceDoneFilter) ValidateConfig(settings map[string]any) error {
@@ -60,6 +63,11 @@ func (f *AcceptanceDoneFilter) AppliesTo(requesterType track.RequesterType) bool
 }
 
 func (f *AcceptanceDoneFilter) Check(ctx context.Context, req TrackRequest, t track.Track, l *listener.Session) Result {
+	// Check if session has started
+	if !f.isStarted() {
+		return Reject("not_started")
+	}
+
 	// Check if session is accepting requests
 	if !f.isAccepting() {
 		return Reject("acceptance_done")

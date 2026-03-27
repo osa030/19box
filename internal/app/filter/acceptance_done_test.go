@@ -23,36 +23,45 @@ func TestAcceptanceDoneFilter_Check(t *testing.T) {
 		queueDuration    time.Duration
 		currentRemaining time.Duration
 		trackDuration    time.Duration
+		isStarted        bool
 		wantAccepted     bool
 		wantCode         string
 	}{
 		{
+			name:         "session not started",
+			isStarted:    false,
+			isAccepting:  true,
+			wantAccepted: false,
+			wantCode:     "not_started",
+		},
+		{
 			name:         "not accepting requests",
+			isStarted:    true,
 			isAccepting:  false,
 			wantAccepted: false,
 			wantCode:     "acceptance_done",
 		},
 		{
 			name:         "no end time set",
+			isStarted:    true,
 			isAccepting:  true,
 			endTime:      nil,
 			wantAccepted: true,
 		},
 		{
 			name:             "track fits before deadline",
+			isStarted:        true,
 			isAccepting:      true,
 			endTime:          &endTime,
 			endingDuration:   endingDuration,
 			queueDuration:    10 * time.Minute,
 			currentRemaining: 2 * time.Minute,
 			trackDuration:    3 * time.Minute,
-			// Deadline is 1 hour from now - 5 mins = 55 mins from now
-			// Estimated end: 2 (current) + 10 (queue) + 3 (track) = 15 mins from now
-			// 15 < 55 -> Accept
-			wantAccepted: true,
+			wantAccepted:     true,
 		},
 		{
 			name:             "track start exceeds deadline",
+			isStarted:        true,
 			isAccepting:      true,
 			endTime:          &endTime,
 			endingDuration:   endingDuration,
@@ -67,6 +76,7 @@ func TestAcceptanceDoneFilter_Check(t *testing.T) {
 		},
 		{
 			name:             "track start exactly at deadline",
+			isStarted:        true,
 			isAccepting:      true,
 			endTime:          &endTime,
 			endingDuration:   endingDuration,
@@ -81,6 +91,7 @@ func TestAcceptanceDoneFilter_Check(t *testing.T) {
 		},
 		{
 			name:             "track end exceeds but start before deadline",
+			isStarted:        true,
 			isAccepting:      true,
 			endTime:          &endTime,
 			endingDuration:   endingDuration,
@@ -99,6 +110,7 @@ func TestAcceptanceDoneFilter_Check(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			filter := NewAcceptanceDoneFilter(
 				func() bool { return tt.isAccepting },
+				func() bool { return tt.isStarted },
 				func() *time.Time { return tt.endTime },
 				func() time.Duration { return tt.endingDuration },
 				func() time.Duration { return tt.queueDuration },

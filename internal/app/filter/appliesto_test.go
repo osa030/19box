@@ -84,6 +84,7 @@ func TestKickedFilter_AppliesTo(t *testing.T) {
 func TestAcceptanceDoneFilter_AppliesTo(t *testing.T) {
 	filter := NewAcceptanceDoneFilter(
 		func() bool { return true },
+		func() bool { return true },
 		func() *time.Time { return nil },
 		func() time.Duration { return 0 },
 		func() time.Duration { return 0 },

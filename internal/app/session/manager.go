@@ -125,7 +125,8 @@ func (m *Manager) setupFilters() {
 
 	// AcceptanceDoneFilter
 	m.filterChain.Add(filter.NewAcceptanceDoneFilter(
-		func() bool { return m.stateMgr.CanAcceptRequests() },
+		func() bool { return m.stateMgr.IsAccepting() },
+		func() bool { return m.stateMgr.GetPhase() != state.PhaseWaiting },
 		func() *time.Time { _, endTime := m.stateMgr.GetTimes(); return endTime },
 		func() time.Duration { return m.stateMgr.GetEndingDuration() },
 		func() time.Duration { return m.playback.GetTotalDuration() },
