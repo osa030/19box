@@ -14,7 +14,6 @@ type WebAdminConfig struct {
 	Server  ServerConfig             `yaml:"server"`
 	JukeBox JukeBoxConfig            `yaml:"19box"`
 	Presets map[string]PresetConfig  `yaml:"presets"`
-	Hooks   HooksConfig              `yaml:"hooks"`
 }
 
 // ServerConfig represents the webadmin server configuration.
@@ -39,17 +38,7 @@ type PresetConfig struct {
 	Filters     map[string]interface{} `yaml:"filters"`
 }
 
-// HooksConfig represents lifecycle hooks configuration.
-type HooksConfig struct {
-	OnStart []ProcessConfig `yaml:"on_start"` // Processes to start with server
-}
 
-// ProcessConfig represents a child process configuration.
-type ProcessConfig struct {
-	Name    string   `yaml:"name"`    // Process name for logging
-	Command string   `yaml:"command"` // Command to execute
-	Args    []string `yaml:"args"`    // Command arguments
-}
 
 // BaseServerConfig represents the base server.yaml configuration.
 // This is a simplified version for merging with presets.

@@ -212,7 +212,7 @@ func (h *Handler) handleServerStart(w http.ResponseWriter, r *http.Request) {
 
 	// Start server
 	ctx := context.Background()
-	if err := h.pm.StartServer(ctx, h.config.JukeBox.Path, configPath, envVars, h.config.Hooks.OnStart); err != nil {
+	if err := h.pm.StartServer(ctx, h.config.JukeBox.Path, configPath, envVars); err != nil {
 		zlog.Error().Err(err).Msg("Failed to start server")
 		jsonError(w, http.StatusInternalServerError, err.Error())
 		return

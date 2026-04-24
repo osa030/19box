@@ -19,7 +19,6 @@ import (
 type ProcessManager struct {
 	mu         sync.RWMutex
 	serverCmd  *exec.Cmd
-	children   []*exec.Cmd
 	configPath string   // Temp config file path
 	logDir     string   // Log output directory
 	envVars    []string // Environment variables from .env
@@ -48,7 +47,6 @@ func (pm *ProcessManager) StartServer(
 	serverPath string,
 	configPath string,
 	envVars []string,
-	hooks []ProcessConfig,
 ) error {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
@@ -96,35 +94,6 @@ func (pm *ProcessManager) StartServer(
 		return errors.Wrap(err, "failed to start 19box-server")
 	}
 
-	// Start hook processes
-	pm.children = make([]*exec.Cmd, 0, len(hooks))
-	for _, hook := range hooks {
-		logPath := filepath.Join(pm.logDir, sanitizeFilename(hook.Name)+".log")
-		logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-		if err != nil {
-			zlog.Error().Err(err).Str("name", hook.Name).Msg("Failed to open log file for hook")
-			continue
-		}
-
-		cmd := exec.CommandContext(ctx, hook.Command, hook.Args...)
-		cmd.Env = env
-		cmd.Stdout = logFile
-		cmd.Stderr = logFile
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
-		zlog.Info().
-			Str("name", hook.Name).
-			Str("command", hook.Command).
-			Msg("Starting hook process")
-
-		if err := cmd.Start(); err != nil {
-			logFile.Close()
-			zlog.Error().Err(err).Str("name", hook.Name).Msg("Failed to start hook process")
-			continue
-		}
-
-		pm.children = append(pm.children, cmd)
-	}
 
 	pm.running = true
 	pm.doneCh = make(chan struct{})
@@ -146,14 +115,6 @@ func (pm *ProcessManager) StopServer() error {
 
 	zlog.Info().Msg("Stopping all processes")
 
-	// Stop children first
-	for _, cmd := range pm.children {
-		if cmd.Process != nil {
-			// Send SIGTERM to process group
-			syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
-		}
-	}
-
 	// Wait a bit for graceful shutdown
 	time.Sleep(500 * time.Millisecond)
 
@@ -170,9 +131,6 @@ func (pm *ProcessManager) StopServer() error {
 		if pm.serverCmd != nil {
 			pm.serverCmd.Wait()
 		}
-		for _, cmd := range pm.children {
-			cmd.Wait()
-		}
 		close(done)
 	}()
 
@@ -184,11 +142,6 @@ func (pm *ProcessManager) StopServer() error {
 		// Force kill
 		if pm.serverCmd != nil && pm.serverCmd.Process != nil {
 			syscall.Kill(-pm.serverCmd.Process.Pid, syscall.SIGKILL)
-		}
-		for _, cmd := range pm.children {
-			if cmd.Process != nil {
-				syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-			}
 		}
 	}
 
@@ -203,7 +156,6 @@ func (pm *ProcessManager) StopServer() error {
 
 	pm.running = false
 	pm.serverCmd = nil
-	pm.children = nil
 	pm.configPath = ""
 	close(pm.doneCh)
 
@@ -235,13 +187,6 @@ func (pm *ProcessManager) monitorServer() {
 			zlog.Info().Msg("19box-server exited normally")
 		}
 		pm.running = false
-		
-		// Stop children when server exits
-		for _, cmd := range pm.children {
-			if cmd.Process != nil {
-				syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
-			}
-		}
 		
 		// Cleanup temp config
 		if pm.configPath != "" {
