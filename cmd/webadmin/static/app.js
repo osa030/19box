@@ -320,6 +320,7 @@ function getFormData() {
     });
 
     return {
+        presetName: presetSelect.value || '',
         session: {
             title: sessionTitle.value,
             start_time: startPicker.selectedDates[0]?.toISOString() || '',
@@ -499,11 +500,69 @@ async function pollStatus() {
         // Update active filters
         renderActiveFilters(status.activeFilters);
 
+        // Update healthcheck
+        renderHealthcheck(status.healthcheck);
+
         // Update listeners
         await updateListeners();
     } catch (err) {
         console.error('Poll error:', err);
     }
+}
+
+// Render healthcheck results as tabs
+let activeHealthcheckTab = null;
+
+function renderHealthcheck(hc) {
+    const card = document.getElementById('healthcheckCard');
+    const tabsContainer = document.getElementById('healthcheckTabs');
+    const contentContainer = document.getElementById('healthcheckContent');
+    if (!card || !tabsContainer || !contentContainer) return;
+
+    if (!hc || Object.keys(hc).length === 0) {
+        card.style.display = 'none';
+        activeHealthcheckTab = null;
+        return;
+    }
+
+    card.style.display = '';
+    const names = Object.keys(hc).sort();
+
+    // Default to first tab if current selection is gone
+    if (!activeHealthcheckTab || !hc[activeHealthcheckTab]) {
+        activeHealthcheckTab = names[0];
+    }
+
+    // Build tabs
+    tabsContainer.innerHTML = names.map(name => {
+        const active = name === activeHealthcheckTab ? ' active' : '';
+        return `<button class="hc-tab${active}" data-hc-tab="${name}">${name}</button>`;
+    }).join('');
+
+    // Attach click handlers
+    tabsContainer.querySelectorAll('.hc-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            activeHealthcheckTab = btn.dataset.hcTab;
+            renderHealthcheck(hc);
+        });
+    });
+
+    // Show active tab content (preserve scroll position)
+    const result = hc[activeHealthcheckTab];
+    let text = result.output || '';
+    if (result.error) {
+        text += (text ? '\n' : '') + '⚠ Error: ' + result.error;
+    }
+    const existingOutput = contentContainer.querySelector('.healthcheck-output');
+    const scrollTop = existingOutput ? existingOutput.scrollTop : 0;
+    contentContainer.innerHTML = `<div class="healthcheck-output"><pre>${escapeHtml(text || '-')}</pre></div>`;
+    contentContainer.querySelector('.healthcheck-output').scrollTop = scrollTop;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 async function updateListeners() {

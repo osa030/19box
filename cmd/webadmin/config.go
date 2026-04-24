@@ -11,9 +11,10 @@ import (
 
 // WebAdminConfig represents the webadmin configuration.
 type WebAdminConfig struct {
-	Server  ServerConfig             `yaml:"server"`
-	JukeBox JukeBoxConfig            `yaml:"19box"`
-	Presets map[string]PresetConfig  `yaml:"presets"`
+	Server      ServerConfig             `yaml:"server"`
+	JukeBox     JukeBoxConfig            `yaml:"19box"`
+	Healthcheck []HealthcheckConfig      `yaml:"healthcheck"` // Default healthchecks
+	Presets     map[string]PresetConfig  `yaml:"presets"`
 }
 
 // ServerConfig represents the webadmin server configuration.
@@ -32,13 +33,19 @@ type JukeBoxConfig struct {
 // PresetConfig represents a preset configuration.
 type PresetConfig struct {
 	Description string                 `yaml:"description"`
+	Healthcheck []HealthcheckConfig    `yaml:"healthcheck"`
 	Session     map[string]interface{} `yaml:"session"`
 	Playlists   map[string]interface{} `yaml:"playlists"`
 	Server      map[string]interface{} `yaml:"server"`
 	Filters     map[string]interface{} `yaml:"filters"`
 }
 
-
+// HealthcheckConfig represents periodic healthcheck command configuration.
+type HealthcheckConfig struct {
+	Name            string `yaml:"name"`             // Display name for tab
+	Command         string `yaml:"command"`          // Shell command to execute (supports arguments)
+	IntervalSeconds int    `yaml:"interval_seconds"` // Execution interval in seconds (default: 30)
+}
 
 // BaseServerConfig represents the base server.yaml configuration.
 // This is a simplified version for merging with presets.

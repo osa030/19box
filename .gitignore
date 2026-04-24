@@ -6,6 +6,7 @@
 *.dylib
 bin/
 android/
+arm/
 
 # Test binary
 *.test

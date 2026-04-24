@@ -12,12 +12,21 @@ server:
   admin_token: "" 
 
 #------------------
+# デフォルトHealthcheck (全プリセット共通)
+#------------------
+healthcheck:
+  - name: "Server Log"
+    command: "tail -5 logs/19box-server.log"
+    interval_seconds: 10
+
+#------------------
 # プリセット設定
 #
 # キー名称は任意で設定できます。
 # - session(ブラウザ上で編集可能)
 # - playlists(ブラウザ上で編集可能)
 # - server.hooks (編集不可)
+# - healthcheck (プリセット固有のチェック)
 #
 # 選択したプリセット値をbase_configに反映させた一時設定ファイルを使って
 # 19boxを起動します。
@@ -25,6 +34,10 @@ server:
 presets:
  daily:
   description: "平日日中BGM"
+  healthcheck:
+    - name: "Daily Status"
+      command: "echo 'daily healthcheck OK'"
+      interval_seconds: 30
   session:
     title: ""
     start_time: ""
@@ -46,6 +59,10 @@ presets:
 
  weekend:
   description: "週末夜開催用"
+  healthcheck:
+    - name: "Weekend Status"
+      command: "echo 'weekend healthcheck OK'"
+      interval_seconds: 60
   session:
     title: ""
     start_time: ""
@@ -64,4 +81,3 @@ presets:
         - "echo 'weekly on_started' > hooks_test.txt"
       on_stopped:
         - "echo 'weekly on_stopped' >> hooks_test.txt"
-

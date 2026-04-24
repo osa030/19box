@@ -133,10 +133,11 @@ func (h *Handler) handlePreset(w http.ResponseWriter, r *http.Request) {
 
 // StartRequest represents a server start request.
 type StartRequest struct {
-	Session   map[string]interface{} `json:"session"`
-	Playlists map[string]interface{} `json:"playlists"`
-	Server    map[string]interface{} `json:"server"`
-	Filters   map[string]interface{} `json:"filters"`
+	PresetName string                 `json:"presetName"`
+	Session    map[string]interface{} `json:"session"`
+	Playlists  map[string]interface{} `json:"playlists"`
+	Server     map[string]interface{} `json:"server"`
+	Filters    map[string]interface{} `json:"filters"`
 }
 
 // handleServerStart starts the 19box-server.
@@ -210,9 +211,20 @@ func (h *Handler) handleServerStart(w http.ResponseWriter, r *http.Request) {
 		envVars = append(envVars, fmt.Sprintf("ADMIN_TOKEN=%s", h.config.JukeBox.AdminToken))
 	}
 
+	// Merge healthcheck configs: default + preset-specific
+	var healthchecks []HealthcheckConfig
+	if len(h.config.Healthcheck) > 0 {
+		healthchecks = append(healthchecks, h.config.Healthcheck...)
+	}
+	if req.PresetName != "" {
+		if preset, ok := h.config.Presets[req.PresetName]; ok && len(preset.Healthcheck) > 0 {
+			healthchecks = append(healthchecks, preset.Healthcheck...)
+		}
+	}
+
 	// Start server
 	ctx := context.Background()
-	if err := h.pm.StartServer(ctx, h.config.JukeBox.Path, configPath, envVars); err != nil {
+	if err := h.pm.StartServer(ctx, h.config.JukeBox.Path, configPath, envVars, healthchecks); err != nil {
 		zlog.Error().Err(err).Msg("Failed to start server")
 		jsonError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -344,14 +356,21 @@ func (h *Handler) handleServerStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonResponse(w, http.StatusOK, map[string]interface{}{
+	result := map[string]interface{}{
 		"running":       true,
 		"queueSize":     resp.Msg.QueueSize,
 		"listenerCount": resp.Msg.ListenerCount,
 		"sessionInfo":   resp.Msg.SessionInfo,
 		"currentTrack":  resp.Msg.CurrentTrack,
 		"activeFilters": h.activeFilters,
-	})
+	}
+
+	// Include healthcheck results if available
+	if hc := h.pm.GetHealthcheckResults(); hc != nil {
+		result["healthcheck"] = hc
+	}
+
+	jsonResponse(w, http.StatusOK, result)
 }
 
 // handleSessionPause pauses the session.

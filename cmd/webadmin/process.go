@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"os"
@@ -24,6 +25,18 @@ type ProcessManager struct {
 	envVars    []string // Environment variables from .env
 	running    bool
 	doneCh     chan struct{}
+
+	// Healthcheck
+	hcMu      sync.RWMutex
+	hcResults map[string]*HealthcheckResult
+	hcCancel  context.CancelFunc
+}
+
+// HealthcheckResult holds the latest healthcheck execution result.
+type HealthcheckResult struct {
+	Output    string `json:"output"`
+	Error     string `json:"error,omitempty"`
+	Timestamp string `json:"timestamp"`
 }
 
 // NewProcessManager creates a new ProcessManager.
@@ -47,6 +60,7 @@ func (pm *ProcessManager) StartServer(
 	serverPath string,
 	configPath string,
 	envVars []string,
+	healthchecks []HealthcheckConfig,
 ) error {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
@@ -101,6 +115,16 @@ func (pm *ProcessManager) StartServer(
 	// Monitor server process
 	go pm.monitorServer()
 
+	// Start healthchecks if configured
+	if len(healthchecks) > 0 {
+		hcCtx, hcCancel := context.WithCancel(context.Background())
+		pm.hcCancel = hcCancel
+		pm.hcResults = make(map[string]*HealthcheckResult)
+		for i := range healthchecks {
+			go pm.runHealthcheck(hcCtx, &healthchecks[i])
+		}
+	}
+
 	return nil
 }
 
@@ -114,6 +138,12 @@ func (pm *ProcessManager) StopServer() error {
 	}
 
 	zlog.Info().Msg("Stopping all processes")
+
+	// Stop healthcheck
+	if pm.hcCancel != nil {
+		pm.hcCancel()
+		pm.hcCancel = nil
+	}
 
 	// Wait a bit for graceful shutdown
 	time.Sleep(500 * time.Millisecond)
@@ -157,6 +187,7 @@ func (pm *ProcessManager) StopServer() error {
 	pm.running = false
 	pm.serverCmd = nil
 	pm.configPath = ""
+	pm.hcResults = nil
 	close(pm.doneCh)
 
 	return nil
@@ -187,7 +218,14 @@ func (pm *ProcessManager) monitorServer() {
 			zlog.Info().Msg("19box-server exited normally")
 		}
 		pm.running = false
-		
+
+		// Stop healthcheck
+		if pm.hcCancel != nil {
+			pm.hcCancel()
+			pm.hcCancel = nil
+		}
+		pm.hcResults = nil
+
 		// Cleanup temp config
 		if pm.configPath != "" {
 			os.Remove(pm.configPath)
@@ -279,4 +317,111 @@ func sanitizeFilename(name string) string {
 		return "process"
 	}
 	return string(result)
+}
+
+// runHealthcheck periodically executes the healthcheck command and stores the result.
+func (pm *ProcessManager) runHealthcheck(ctx context.Context, cfg *HealthcheckConfig) {
+	interval := time.Duration(cfg.IntervalSeconds) * time.Second
+	if interval <= 0 {
+		interval = 30 * time.Second
+	}
+
+	// Timeout is half of interval, minimum 5 seconds
+	timeout := interval / 2
+	if timeout < 5*time.Second {
+		timeout = 5 * time.Second
+	}
+
+	name := cfg.Name
+	if name == "" {
+		name = "Healthcheck"
+	}
+
+	maxLines := 50
+
+	zlog.Info().
+		Str("name", name).
+		Str("command", cfg.Command).
+		Dur("interval", interval).
+		Msg("Starting healthcheck")
+
+	// Run immediately on start
+	pm.executeHealthcheck(ctx, name, cfg.Command, timeout, maxLines)
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			zlog.Info().Str("name", name).Msg("Healthcheck stopped")
+			return
+		case <-ticker.C:
+			pm.executeHealthcheck(ctx, name, cfg.Command, timeout, maxLines)
+		}
+	}
+}
+
+// executeHealthcheck runs the healthcheck command once and stores the result.
+func (pm *ProcessManager) executeHealthcheck(ctx context.Context, name string, command string, timeout time.Duration, maxLines int) {
+	cmdCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(cmdCtx, "sh", "-c", command)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+
+	// Truncate output to maxLines
+	output := truncateLines(stdout.String(), maxLines)
+
+	result := &HealthcheckResult{
+		Output:    output,
+		Timestamp: time.Now().Format(time.RFC3339),
+	}
+
+	if err != nil {
+		errMsg := err.Error()
+		if stderr.Len() > 0 {
+			errMsg = stderr.String()
+		}
+		result.Error = errMsg
+	}
+
+	pm.hcMu.Lock()
+	if pm.hcResults != nil {
+		pm.hcResults[name] = result
+	}
+	pm.hcMu.Unlock()
+}
+
+// GetHealthcheckResults returns all latest healthcheck results.
+func (pm *ProcessManager) GetHealthcheckResults() map[string]*HealthcheckResult {
+	pm.hcMu.RLock()
+	defer pm.hcMu.RUnlock()
+	if len(pm.hcResults) == 0 {
+		return nil
+	}
+	// Return a copy
+	copy := make(map[string]*HealthcheckResult, len(pm.hcResults))
+	for k, v := range pm.hcResults {
+		copy[k] = v
+	}
+	return copy
+}
+
+// truncateLines limits the output to the last n lines.
+func truncateLines(s string, n int) string {
+	lines := bytes.Split([]byte(s), []byte("\n"))
+	// Remove trailing empty line from split
+	if len(lines) > 0 && len(lines[len(lines)-1]) == 0 {
+		lines = lines[:len(lines)-1]
+	}
+	if len(lines) <= n {
+		return s
+	}
+	truncated := bytes.Join(lines[len(lines)-n:], []byte("\n"))
+	return string(truncated)
 }
